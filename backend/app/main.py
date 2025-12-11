@@ -4,7 +4,7 @@ from app.api import routes
 from app.services.registry import ServiceRegistry
 from app.services.ec2 import EC2Service
 from app.services.s3 import S3Service
-from app.services.lambda import LambdaService
+from app.services.aws_lambda import LambdaService
 
 app = FastAPI()
 
