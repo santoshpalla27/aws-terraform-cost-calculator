@@ -1,10 +1,6 @@
 import React from 'react';
 
-interface ComponentCost {
-    name: string;
-    hourly_cost: number;
-    monthly_cost: number;
-}
+
 
 interface Resource {
     address: string;
