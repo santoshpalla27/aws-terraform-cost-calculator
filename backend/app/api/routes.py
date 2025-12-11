@@ -5,7 +5,8 @@ import zipfile
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.engine.parser import HCLParser
 from app.engine.pricing import PricingService
-from app.services.registry import ServiceRegistry, ProjectContext # Import needed types
+from app.services.registry import ServiceRegistry
+from app.models.terraform import ProjectContext
 from app.schemas.schemas import CostEstimateResponse, ResourceCost, CostItem
 
 router = APIRouter()
