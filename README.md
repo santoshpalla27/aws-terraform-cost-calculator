@@ -1,73 +1,72 @@
-# React + TypeScript + Vite
+# CloudCost ☁️💰
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**CloudCost** is a modular, self-hosted alternative to Infracost. It parses Terraform code (HCL) without needing AWS credentials, resolves dependencies, and provides accurate cost estimations using offline pricing data.
 
-Currently, two official plugins are available:
+## 🏗️ Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Backend**: Python (FastAPI)
+  - **Parser**: Hybrid `python-hcl2` + JSON for parsing Terraform.
+  - **Graph Engine**: `networkx` for dependency resolution.
+  - **Pricing Engine**: PostgreSQL with JSONB containment queries for sub-millisecond price lookups.
+- **Frontend**: React (TypeScript + Vite) + Chart.js
+- **Database**: PostgreSQL (Stores AWS Price List data)
+- **Cache**: Redis (For parsing job queues - *Future Feature*)
+- **Infrastructure**: Docker Compose
 
-## React Compiler
+## 🚀 Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.11+ (for scripts)
+- Node.js 18+ (for local frontend dev)
 
-## Expanding the ESLint configuration
+### 1. Start Infrastructure
+```bash
+docker-compose up -d --build
+```
+This spins up Postgres, Redis, Backend (port 8000), and Frontend (port 3000).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 2. Sync Pricing Data (ETL)
+Wait for Postgres to be healthy, then run the ETL script to fetch AWS pricing (defaults to **us-east-1** for EC2, RDS, S3, and Lambda).
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# Install script deps (if running locally)
+pip install requests psycopg2-binary
+# Or run inside backend container
+docker-compose exec backend python scripts/sync_aws_pricing.py
+```
+*Note: This downloads ~100MB+ of data and inserts it into the DB. It may take a few minutes.*
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 3. Access the Dashboard
+Open [http://localhost:3000](http://localhost:3000)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1.  **Drag & Drop** your Terraform project (zip file) into the upload zone.
+2.  Wait for the parsing and estimation.
+3.  View the **Monthly Cost** breakdown and Charts.
+
+## 🛠️ Development
+
+### Backend
+Currently runs at `http://localhost:8000`. API Docs at `/docs`.
+
+### Frontend
+To run locally with hot-reload:
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Adding New Services
+To add support for a new AWS resource (e.g., RDS):
+1.  Create `backend/app/services/rds.py` inheriting `BaseService`.
+2.  Implement `get_cost_components`.
+3.  Register it in `backend/app/main.py`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🧪 Testing
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Run the integration test to verify the full pipeline (Zip -> Upload -> Estimate):
+```bash
+# Requires backend running on localhost:8000
+python tests/integration_test.py
 ```

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: cloudcost_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cloudcost
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - cloudcost-network
+
+  redis:
+    image: redis:alpine
+    container_name: cloudcost_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - cloudcost-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: cloudcost_backend
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/cloudcost
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - cloudcost-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: cloudcost_frontend
+    ports:
+      - "3000:80"
+    networks:
+      - cloudcost-network
+
+networks:
+  cloudcost-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
