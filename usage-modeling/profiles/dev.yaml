@@ -1,0 +1,66 @@
+# Development Environment Profile
+
+profile_name: dev
+description: Development environment with minimal usage for cost optimization
+environment: development
+
+# Core Assumptions
+assumptions:
+  - "Resources run 8 hours/day, 5 days/week (40 hours/week)"
+  - "Low traffic and data transfer for development testing"
+  - "Minimal storage retention (1-day backups)"
+  - "Non-production workloads with reduced availability requirements"
+  - "Cost optimization prioritized over performance"
+
+# Default Usage Parameters
+defaults:
+  # General
+  uptime_hours_per_month: 160  # 40 hours/week * 4 weeks
+  uptime_percentage: 22  # 160/730 hours
+  availability_target: 95  # percent
+  
+  # EC2 Compute
+  ec2_uptime_hours: 160
+  ec2_cpu_utilization: 20  # percent
+  ec2_memory_utilization: 30  # percent
+  ec2_network_out_gb: 10  # GB/month
+  ec2_network_in_gb: 5  # GB/month
+  ec2_ebs_iops: 100  # IOPS for gp3
+  
+  # S3 Storage
+  s3_storage_gb: 50  # GB average
+  s3_requests_get: 10000  # GET requests/month
+  s3_requests_put: 1000  # PUT requests/month
+  s3_requests_list: 500  # LIST requests/month
+  s3_data_transfer_out_gb: 5  # GB/month
+  s3_data_retrieval_gb: 10  # GB/month
+  
+  # RDS Database
+  rds_uptime_hours: 160
+  rds_storage_gb: 20  # GB
+  rds_backup_storage_gb: 20  # GB (1x storage for 1-day retention)
+  rds_backup_retention_days: 1
+  rds_iops: 100  # Provisioned IOPS (if applicable)
+  rds_connections: 10  # Average concurrent connections
+  
+  # ELB Load Balancer
+  elb_uptime_hours: 160
+  elb_processed_gb: 10  # GB/month
+  elb_connections_per_second: 10  # Average
+  elb_new_connections_per_second: 5
+  elb_active_connections: 100
+  elb_lcu_hours: 160  # Load Balancer Capacity Units
+  
+  # NAT Gateway
+  nat_uptime_hours: 160
+  nat_processed_gb: 10  # GB/month
+  
+  # EKS Cluster
+  eks_uptime_hours: 160
+  eks_worker_nodes: 2
+  eks_pods_per_node: 10
+
+# Scaling Factors for Scenarios
+scaling:
+  min_factor: 0.5  # 50% of expected
+  max_factor: 1.5  # 150% of expected

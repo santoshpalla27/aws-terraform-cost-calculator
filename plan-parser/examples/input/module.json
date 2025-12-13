@@ -1,0 +1,58 @@
+{
+    "format_version": "1.2",
+    "terraform_version": "1.6.6",
+    "resource_changes": [
+        {
+            "address": "module.web_servers.aws_instance.server",
+            "mode": "managed",
+            "type": "aws_instance",
+            "name": "server",
+            "provider_name": "registry.terraform.io/hashicorp/aws",
+            "module_address": "module.web_servers",
+            "change": {
+                "actions": [
+                    "create"
+                ],
+                "before": null,
+                "after": {
+                    "ami": "ami-0c55b159cbfafe1f0",
+                    "instance_type": "t3.large",
+                    "tags": {
+                        "Name": "WebServer",
+                        "Module": "web_servers"
+                    }
+                },
+                "after_unknown": {
+                    "id": true,
+                    "public_ip": true
+                }
+            }
+        },
+        {
+            "address": "module.web_servers.module.load_balancer.aws_lb.main",
+            "mode": "managed",
+            "type": "aws_lb",
+            "name": "main",
+            "provider_name": "registry.terraform.io/hashicorp/aws",
+            "module_address": "module.web_servers.module.load_balancer",
+            "change": {
+                "actions": [
+                    "create"
+                ],
+                "before": null,
+                "after": {
+                    "name": "web-lb",
+                    "load_balancer_type": "application",
+                    "tags": {
+                        "Name": "WebLB"
+                    }
+                },
+                "after_unknown": {
+                    "id": true,
+                    "arn": true,
+                    "dns_name": true
+                }
+            }
+        }
+    ]
+}

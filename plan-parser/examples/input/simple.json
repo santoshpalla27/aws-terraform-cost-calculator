@@ -1,0 +1,58 @@
+{
+    "format_version": "1.2",
+    "terraform_version": "1.6.6",
+    "resource_changes": [
+        {
+            "address": "aws_instance.web",
+            "mode": "managed",
+            "type": "aws_instance",
+            "name": "web",
+            "provider_name": "registry.terraform.io/hashicorp/aws",
+            "change": {
+                "actions": [
+                    "create"
+                ],
+                "before": null,
+                "after": {
+                    "ami": "ami-0c55b159cbfafe1f0",
+                    "instance_type": "t3.medium",
+                    "tags": {
+                        "Name": "WebServer",
+                        "Environment": "Production"
+                    },
+                    "availability_zone": "us-east-1a"
+                },
+                "after_unknown": {
+                    "id": true,
+                    "public_ip": true,
+                    "private_ip": true,
+                    "arn": true
+                }
+            }
+        },
+        {
+            "address": "aws_s3_bucket.data",
+            "mode": "managed",
+            "type": "aws_s3_bucket",
+            "name": "data",
+            "provider_name": "registry.terraform.io/hashicorp/aws",
+            "change": {
+                "actions": [
+                    "create"
+                ],
+                "before": null,
+                "after": {
+                    "bucket": "my-data-bucket-12345",
+                    "tags": {
+                        "Name": "DataBucket"
+                    }
+                },
+                "after_unknown": {
+                    "id": true,
+                    "arn": true,
+                    "region": true
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,66 @@
+# Staging Environment Profile
+
+profile_name: staging
+description: Staging environment with moderate usage for pre-production testing
+environment: staging
+
+# Core Assumptions
+assumptions:
+  - "Resources run 12 hours/day, 7 days/week for extended testing"
+  - "Moderate traffic simulating production patterns"
+  - "Weekly backup retention for testing scenarios"
+  - "Higher availability than dev, lower than prod"
+  - "Balance between cost and performance"
+
+# Default Usage Parameters
+defaults:
+  # General
+  uptime_hours_per_month: 360  # 12 hours/day * 30 days
+  uptime_percentage: 49  # 360/730 hours
+  availability_target: 99  # percent
+  
+  # EC2 Compute
+  ec2_uptime_hours: 360
+  ec2_cpu_utilization: 40  # percent
+  ec2_memory_utilization: 50  # percent
+  ec2_network_out_gb: 50  # GB/month
+  ec2_network_in_gb: 25  # GB/month
+  ec2_ebs_iops: 300  # IOPS for gp3
+  
+  # S3 Storage
+  s3_storage_gb: 200  # GB average
+  s3_requests_get: 100000  # GET requests/month
+  s3_requests_put: 10000  # PUT requests/month
+  s3_requests_list: 5000  # LIST requests/month
+  s3_data_transfer_out_gb: 25  # GB/month
+  s3_data_retrieval_gb: 50  # GB/month
+  
+  # RDS Database
+  rds_uptime_hours: 360
+  rds_storage_gb: 100  # GB
+  rds_backup_storage_gb: 700  # GB (7x storage for 7-day retention)
+  rds_backup_retention_days: 7
+  rds_iops: 300  # Provisioned IOPS
+  rds_connections: 50  # Average concurrent connections
+  
+  # ELB Load Balancer
+  elb_uptime_hours: 360
+  elb_processed_gb: 50  # GB/month
+  elb_connections_per_second: 50  # Average
+  elb_new_connections_per_second: 25
+  elb_active_connections: 500
+  elb_lcu_hours: 360
+  
+  # NAT Gateway
+  nat_uptime_hours: 360
+  nat_processed_gb: 50  # GB/month
+  
+  # EKS Cluster
+  eks_uptime_hours: 360
+  eks_worker_nodes: 3
+  eks_pods_per_node: 20
+
+# Scaling Factors for Scenarios
+scaling:
+  min_factor: 0.5  # 50% of expected
+  max_factor: 1.5  # 150% of expected
