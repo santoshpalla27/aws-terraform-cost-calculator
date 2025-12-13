@@ -1,0 +1,8 @@
+{
+    "error": "ValidationError",
+    "message": "Invalid request parameters",
+    "detail": {
+        "field": "region",
+        "issue": "Invalid AWS region format"
+    }
+}

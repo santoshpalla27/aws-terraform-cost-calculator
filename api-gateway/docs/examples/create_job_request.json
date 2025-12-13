@@ -1,0 +1,5 @@
+{
+    "upload_id": "upload_456def",
+    "region": "us-east-1",
+    "idempotency_key": "unique-key-12345"
+}

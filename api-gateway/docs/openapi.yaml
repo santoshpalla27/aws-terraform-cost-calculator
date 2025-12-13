@@ -1,0 +1,447 @@
+openapi: 3.0.3
+info:
+  title: Terraform Cost Estimator API Gateway
+  description: |
+    Production-grade API Gateway for AWS Terraform Cost Estimation Platform.
+    
+    This API provides endpoints for uploading Terraform configurations and managing cost estimation jobs.
+    
+    ## Authentication
+    
+    Authentication is optional and can be enabled via configuration. When enabled, all endpoints (except health checks) require a valid JWT token in the Authorization header:
+    
+    ```
+    Authorization: Bearer <token>
+    ```
+    
+    ## Rate Limiting
+    
+    API requests are rate-limited to prevent abuse. Default limits:
+    - 100 requests per 60 seconds per IP address
+    
+    Rate limit exceeded responses return HTTP 429.
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check and monitoring endpoints
+  - name: Uploads
+    description: Terraform file upload endpoints
+  - name: Jobs
+    description: Cost estimation job management
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Returns basic service health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              example:
+                status: healthy
+                version: 1.0.0
+                timestamp: '2025-12-13T10:00:00Z'
+
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness probe
+      description: Checks if service is ready to accept traffic
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  /health/live:
+    get:
+      tags:
+        - Health
+      summary: Liveness probe
+      description: Checks if service is alive
+      operationId: livenessCheck
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  /api/v1/uploads:
+    post:
+      tags:
+        - Uploads
+      summary: Upload Terraform files
+      description: Upload Terraform files as ZIP or individual files
+      operationId: uploadTerraformFiles
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - project_name
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Terraform files (ZIP or .tf files)
+                project_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Project name
+                description:
+                  type: string
+                  maxLength: 500
+                  description: Optional project description
+      responses:
+        '201':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+              example:
+                upload_id: upload_456def
+                project_name: my-terraform-project
+                file_count: 5
+                total_size_bytes: 12345
+                message: Files uploaded successfully
+        '400':
+          description: Invalid upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/jobs:
+    post:
+      tags:
+        - Jobs
+      summary: Create cost estimation job
+      description: Create a new job to estimate costs for uploaded Terraform files
+      operationId: createJob
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+            example:
+              upload_id: upload_456def
+              region: us-east-1
+              idempotency_key: unique-key-123
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+              example:
+                job_id: job_123abc
+                upload_id: upload_456def
+                status: PENDING
+                region: us-east-1
+                created_at: '2025-12-13T10:00:00Z'
+                updated_at: '2025-12-13T10:00:00Z'
+                error_message: null
+                result_data: null
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Upload not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    get:
+      tags:
+        - Jobs
+      summary: List jobs
+      description: List all cost estimation jobs with pagination
+      operationId: listJobs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Jobs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+
+  /api/v1/jobs/{job_id}:
+    get:
+      tags:
+        - Jobs
+      summary: Get job status
+      description: Retrieve the status and details of a cost estimation job
+      operationId: getJob
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      tags:
+        - Jobs
+      summary: Delete job
+      description: Cancel and delete a cost estimation job
+      operationId: deleteJob
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          description: Job identifier
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Job deleted successfully
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication (optional, can be disabled via configuration)
+
+  schemas:
+    HealthCheckResponse:
+      type: object
+      required:
+        - status
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          description: Service status
+          example: healthy
+        version:
+          type: string
+          description: Application version
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+          description: Current timestamp
+
+    CreateJobRequest:
+      type: object
+      required:
+        - upload_id
+      properties:
+        upload_id:
+          type: string
+          minLength: 1
+          description: Upload identifier from previous upload
+        region:
+          type: string
+          default: us-east-1
+          description: AWS region for cost estimation
+        idempotency_key:
+          type: string
+          description: Optional idempotency key to prevent duplicate job creation
+
+    JobResponse:
+      type: object
+      required:
+        - job_id
+        - upload_id
+        - status
+        - region
+        - created_at
+        - updated_at
+      properties:
+        job_id:
+          type: string
+          description: Unique job identifier
+        upload_id:
+          type: string
+          description: Associated upload identifier
+        status:
+          type: string
+          enum: [PENDING, RUNNING, FAILED, COMPLETED]
+          description: Current job status
+        region:
+          type: string
+          description: AWS region
+        created_at:
+          type: string
+          format: date-time
+          description: Job creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        error_message:
+          type: string
+          nullable: true
+          description: Error message if failed
+        result_data:
+          type: object
+          nullable: true
+          description: Cost estimation results
+
+    JobListResponse:
+      type: object
+      required:
+        - jobs
+        - total
+        - page
+        - page_size
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobResponse'
+        total:
+          type: integer
+          description: Total number of jobs
+        page:
+          type: integer
+          description: Current page number
+        page_size:
+          type: integer
+          description: Number of items per page
+
+    UploadResponse:
+      type: object
+      required:
+        - upload_id
+        - project_name
+        - file_count
+        - total_size_bytes
+        - message
+      properties:
+        upload_id:
+          type: string
+          description: Unique upload identifier
+        project_name:
+          type: string
+          description: Project name
+        file_count:
+          type: integer
+          description: Number of files uploaded
+        total_size_bytes:
+          type: integer
+          description: Total size in bytes
+        message:
+          type: string
+          description: Success message
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+        detail:
+          type: object
+          description: Additional error details
