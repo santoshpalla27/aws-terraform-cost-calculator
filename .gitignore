@@ -8,8 +8,12 @@ yarn.lock
 
 combine-files.ps1
 combined-file.txt
+
 api-gateway-combined.txt
 combine-api-gateway.ps1
+
+combine-job-orchestrator.ps1
+job-orchestrator-combined.txt
 
 
 # Environment variables

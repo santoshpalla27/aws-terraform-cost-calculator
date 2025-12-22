@@ -1,0 +1,86 @@
+"""
+Configuration management for Job Orchestrator.
+All configuration loaded from environment variables.
+"""
+from pydantic_settings import BaseSettings
+from typing import Dict
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+    
+    # Database
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/orchestrator"
+    
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+    
+    # Stage Timeouts (seconds)
+    planning_timeout: int = 300
+    parsing_timeout: int = 120
+    enriching_timeout: int = 180
+    costing_timeout: int = 60
+    
+    # Stage Retry Configuration
+    planning_max_retries: int = 2
+    parsing_max_retries: int = 2
+    enriching_max_retries: int = 1
+    costing_max_retries: int = 2
+    
+    # Job Configuration
+    job_ttl: int = 3600  # 1 hour
+    lock_ttl: int = 300  # 5 minutes
+    worker_id: str = "orchestrator-1"
+    
+    # Downstream Services
+    terraform_execution_url: str = "http://localhost:8001"
+    plan_interpreter_url: str = "http://localhost:8002"
+    metadata_resolver_url: str = "http://localhost:8003"
+    pricing_engine_url: str = "http://localhost:8004"
+    usage_modeling_url: str = "http://localhost:8005"
+    cost_aggregation_url: str = "http://localhost:8006"
+    
+    # Service Authentication
+    service_auth_token: str = "internal-service-token"
+    
+    # Logging
+    log_level: str = "INFO"
+    log_format: str = "json"
+    
+    # Server
+    host: str = "0.0.0.0"
+    port: int = 8001
+    
+    @property
+    def stage_config(self) -> Dict[str, Dict[str, int]]:
+        """Get stage configuration."""
+        return {
+            "PLANNING": {
+                "timeout": self.planning_timeout,
+                "max_retries": self.planning_max_retries,
+                "backoff_base": 2,
+            },
+            "PARSING": {
+                "timeout": self.parsing_timeout,
+                "max_retries": self.parsing_max_retries,
+                "backoff_base": 2,
+            },
+            "ENRICHING": {
+                "timeout": self.enriching_timeout,
+                "max_retries": self.enriching_max_retries,
+                "backoff_base": 2,
+            },
+            "COSTING": {
+                "timeout": self.costing_timeout,
+                "max_retries": self.costing_max_retries,
+                "backoff_base": 2,
+            },
+        }
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+# Global settings instance
+settings = Settings()
