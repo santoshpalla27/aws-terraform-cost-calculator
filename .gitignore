@@ -6,6 +6,8 @@ yarn-error.log*
 package-lock.json
 yarn.lock
 
+combine-files.ps1
+combined-file.txt
 # Environment variables
 .env
 .env.local
