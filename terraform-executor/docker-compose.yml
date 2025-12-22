@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # API Service (ONLY enqueues jobs)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TERRAFORM_VERSION: "1.6.0"
+    ports:
+      - "8002:8002"
+    environment:
+      - TERRAFORM_VERSION=1.6.0
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./security/seccomp.json
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health').read()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Worker Process (Executes Terraform)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TERRAFORM_VERSION: "1.6.0"
+    command: [ "python", "worker.py" ]
+    environment:
+      - TERRAFORM_VERSION=1.6.0
+      - MAX_EXECUTION_TIME=300
+      - ALLOWED_PROVIDERS=aws,random,null
+      - BLOCK_LOCAL_EXEC=true
+      - BLOCK_EXTERNAL_DATA=true
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./security/seccomp.json
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g
+    # Resource limits (higher for Terraform execution)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+
+  # Redis (Job Queue)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:

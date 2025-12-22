@@ -15,6 +15,8 @@ combine-api-gateway.ps1
 combine-job-orchestrator.ps1
 job-orchestrator-combined.txt
 
+combine-terraform-executor.ps1
+terraform-executor-combined.txt
 
 # Environment variables
 .env
