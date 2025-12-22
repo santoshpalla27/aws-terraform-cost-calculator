@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_ENABLED=false
+      - JWT_SECRET=dev-secret-change-in-production
+      - MAX_UPLOAD_SIZE=52428800
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS=100
+      - RATE_LIMIT_WINDOW=60
+      - CORS_ORIGINS=http://localhost:3000
+      - LOG_LEVEL=INFO
+    volumes:
+      - upload_data:/tmp/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  upload_data:

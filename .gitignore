@@ -8,6 +8,10 @@ yarn.lock
 
 combine-files.ps1
 combined-file.txt
+api-gateway-combined.txt
+combine-api-gateway.ps1
+
+
 # Environment variables
 .env
 .env.local
