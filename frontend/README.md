@@ -1,111 +1,239 @@
-# Terraform Cost Estimator - Frontend
+# AWS Cost Calculator - Frontend
 
-Production-grade React + TypeScript UI for Terraform cost estimation.
+Production-grade Next.js frontend for the Terraform-based AWS Cost Calculator platform.
+
+## Overview
+
+This is a **pure UI layer** that communicates exclusively with the API Gateway. It does NOT:
+- Run Terraform
+- Calculate costs
+- Contain business logic
+- Store secrets
+- Call AWS APIs directly
 
 ## Features
 
-- **File Upload**: Drag & drop or browse for Terraform plan JSON
-- **Job Progress**: 5-stage progress indicator with animations
-- **Cost Visualizations**:
-  - Service breakdown (Pie chart)
-  - Region breakdown (Bar chart)
-  - Resource list (Sortable table)
-- **Confidence Indicators**: Visual confidence scoring
-- **Accessible Design**: ARIA labels, keyboard navigation
-- **Responsive**: Works on desktop and tablet
+- 📤 **Terraform File Upload** - Drag-and-drop interface with validation
+- 📊 **Cost Visualization** - Detailed breakdowns by service and resource
+- 🔄 **Real-time Updates** - WebSocket integration for job status
+- 📈 **Confidence Scores** - Visual indicators for estimate accuracy
+- ⚠️ **Warnings & Assumptions** - Transparent cost calculation details
+- 🎨 **Modern UI** - Built with Tailwind CSS and Lucide icons
 
-## Quick Start
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **HTTP Client**: Axios
+- **Icons**: Lucide React
+- **Charts**: Recharts
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- npm or yarn
+
+### Local Development
+
+1. **Clone and navigate to the frontend directory**
+   ```bash
+   cd frontend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+   
+   Copy `env.example` to `.env.local`:
+   ```bash
+   cp env.example .env.local
+   ```
+   
+   Update the values:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   NEXT_PUBLIC_WS_URL=ws://localhost:8000
+   NEXT_PUBLIC_MAX_FILE_SIZE=52428800
+   ```
+
+4. **Run development server**
+   ```bash
+   npm run dev
+   ```
+   
+   Open [http://localhost:3000](http://localhost:3000)
+
+### Production Build
 
 ```bash
-cd frontend
-npm install
-npm run dev
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-Visit: http://localhost:3000
+## Docker Deployment
 
-## Build for Production
+### Build Docker Image
 
 ```bash
-npm run build
+docker build -t aws-cost-calculator-frontend .
+```
+
+### Run with Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+The frontend will be available at `http://localhost:3000`
+
+### Environment Variables for Docker
+
+Create a `.env` file:
+```env
+NEXT_PUBLIC_API_URL=http://api-gateway:8000
+NEXT_PUBLIC_WS_URL=ws://api-gateway:8000
 ```
 
 ## Project Structure
 
 ```
-src/
+frontend/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout with navigation
+│   ├── page.tsx           # Home page
+│   ├── upload/            # Upload page
+│   ├── jobs/              # Jobs list and detail pages
+│   └── globals.css        # Global styles
 ├── components/
-│   ├── FileUpload/
-│   │   ├── FileUpload.tsx
-│   │   └── FileUpload.css
-│   ├── JobProgress/
-│   │   ├── JobProgress.tsx
-│   │   └── JobProgress.css
-│   ├── ConfidenceIndicator/
-│   │   ├── ConfidenceIndicator.tsx
-│   │   └── ConfidenceIndicator.css
-│   └── CostDashboard/
-│       ├── CostDashboard.tsx
-│       ├── ServiceChart.tsx
-│       ├── RegionChart.tsx
-│       ├── ResourceList.tsx
-│       └── *.css
-├── services/
-│   ├── api.ts
-│   └── types.ts
-├── App.tsx
-└── main.tsx
+│   ├── common/            # Shared components (loading, error, empty states)
+│   ├── upload/            # Upload form component
+│   ├── jobs/              # Job list and status components
+│   └── cost/              # Cost visualization components
+├── lib/
+│   ├── api/               # API client
+│   ├── websocket/         # WebSocket service
+│   ├── types/             # TypeScript definitions
+│   └── utils/             # Utility functions
+├── Dockerfile             # Production Docker build
+├── docker-compose.yml     # Docker Compose configuration
+└── next.config.ts         # Next.js configuration
 ```
-
-## Components
-
-### FileUpload
-- Drag & drop support
-- File type validation
-- Keyboard accessible
-
-### JobProgress
-- 5 stages: Parsing → Enriching → Modeling → Calculating → Complete
-- Progress bar with percentage
-- Animated icons
-
-### CostDashboard
-- Total cost summary
-- Confidence indicator
-- Service/Region charts
-- Resource table
-
-### Charts
-- **ServiceChart**: Pie chart using Recharts
-- **RegionChart**: Bar chart using Recharts
-- Responsive containers
-- Tooltips and legends
 
 ## API Integration
 
-All backend APIs are integrated via `services/api.ts`:
+The frontend expects the following API endpoints:
 
-- Plan Parser: `/api/v1/parse`
-- Metadata Resolver: `/api/v1/enrich`
-- Usage Modeling: `/api/v1/scenarios`
-- Cost Aggregation: `/api/v1/estimate`
-- Results Storage: `/api/v1/store`, `/api/v1/jobs/*`
+### Job Management
+- `POST /api/jobs` - Create new cost estimation job
+- `GET /api/jobs` - List all jobs (with pagination)
+- `GET /api/jobs/:id` - Get job details
+- `GET /api/jobs/:id/results` - Get cost estimation results
+- `POST /api/jobs/:id/retry` - Retry failed job
 
-## Accessibility
+### Usage Profiles
+- `GET /api/usage-profiles` - Get available usage profiles
+- `GET /api/usage-profiles/:id` - Get specific profile
 
-- ARIA labels on all interactive elements
-- Keyboard navigation support
-- Screen reader compatible
-- Color contrast: WCAG AA compliant
+### WebSocket
+- `WS /api/jobs/:id/status` - Real-time job status updates
 
-## Technologies
+## Key Components
 
-- React 18
-- TypeScript 5
-- Vite (build tool)
-- Recharts (charts)
-- Axios (HTTP client)
+### Upload Form (`components/upload/upload-form.tsx`)
+- Drag-and-drop file upload
+- Client-side validation (.tf, .tfvars, .zip)
+- Progress tracking
+- Usage profile selection
+
+### Job List (`components/jobs/job-list.tsx`)
+- Paginated job list
+- Status filtering
+- Real-time status badges
+
+### Job Status (`components/jobs/job-status.tsx`)
+- WebSocket integration for live updates
+- Progress tracking
+- Retry functionality for failed jobs
+
+### Cost Summary (`components/cost/cost-summary.tsx`)
+- Total monthly cost display
+- Confidence score visualization
+- Service breakdown charts
+- Warnings and assumptions
+
+### Resource Breakdown (`components/cost/resource-breakdown.tsx`)
+- Detailed cost table
+- Per-resource confidence scores
+- Cost component breakdown
+- Assumptions and warnings popover
+
+## Development Guidelines
+
+### Adding New Features
+
+1. Create types in `lib/types/index.ts`
+2. Add API methods in `lib/api/api-client.ts`
+3. Build components in appropriate directories
+4. Create pages in `app/` directory
+
+### Styling
+
+- Use Tailwind CSS utility classes
+- Follow the existing color scheme (blue primary)
+- Ensure responsive design (mobile-first)
+- Use the `cn()` utility for conditional classes
+
+### Type Safety
+
+- All API responses must be typed
+- Use TypeScript strict mode
+- Avoid `any` types
+- Export types from `lib/types/index.ts`
+
+## Troubleshooting
+
+### WebSocket Connection Issues
+
+If WebSocket connections fail, the app will gracefully degrade. Consider implementing polling as a fallback:
+
+```typescript
+// In components/jobs/job-status.tsx
+// Add polling logic if WebSocket fails
+```
+
+### API Connection Errors
+
+Check that `NEXT_PUBLIC_API_URL` is correctly set and the API Gateway is running.
+
+### Build Errors
+
+Ensure all dependencies are installed:
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## Production Checklist
+
+- [ ] Set production API URLs in environment variables
+- [ ] Enable HTTPS for API communication
+- [ ] Configure CORS on API Gateway
+- [ ] Set up error monitoring (e.g., Sentry)
+- [ ] Enable rate limiting
+- [ ] Add authentication if required
+- [ ] Test WebSocket connectivity
+- [ ] Verify file upload limits
+- [ ] Test responsive design on mobile devices
 
 ## License
 
-[Your License]
+Part of the AWS Cost Calculator platform.
