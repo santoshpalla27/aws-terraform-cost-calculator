@@ -58,7 +58,25 @@ app.include_router(usage_profiles.router)
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors."""
-    logger.warning(f"Validation error: {exc.errors()}")
+    correlation_id = get_correlation_id()
+    errors = exc.errors()
+    
+    # Sanitize error details to avoid JSON serialization issues with bytes
+    sanitized_errors = []
+    for error in errors:
+        sanitized_error = error.copy()
+        # Convert bytes to string representation in input field
+        if 'input' in sanitized_error and isinstance(sanitized_error['input'], dict):
+            sanitized_input = {}
+            for key, value in sanitized_error['input'].items():
+                if isinstance(value, bytes):
+                    sanitized_input[key] = f"<bytes: {len(value)} bytes>"
+                else:
+                    sanitized_input[key] = value
+            sanitized_error['input'] = sanitized_input
+        sanitized_errors.append(sanitized_error)
+    
+    logger.warning(f"Validation error: {sanitized_errors}", extra={"correlation_id": correlation_id})
     
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -66,9 +84,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
-                "details": exc.errors()
+                "details": sanitized_errors
             },
-            "correlation_id": get_correlation_id()
+            "correlation_id": correlation_id
         }
     )
 
