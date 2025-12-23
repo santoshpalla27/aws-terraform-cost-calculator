@@ -59,25 +59,39 @@ async def init_db() -> None:
         statements = []
         current_statement = []
         in_dollar_quote = False
+        dollar_count = 0
         
         for line in sql.split('\n'):
-            # Check for dollar-quote delimiters
+            # Skip pure comment lines
+            stripped = line.strip()
+            if stripped.startswith('--') and not current_statement:
+                continue
+            
+            # Count dollar signs to track quote state
             if '$$' in line:
-                in_dollar_quote = not in_dollar_quote
+                dollar_count += line.count('$$')
+                in_dollar_quote = (dollar_count % 2) == 1
             
-            current_statement.append(line)
+            # Add line to current statement
+            if stripped:  # Only add non-empty lines
+                current_statement.append(line)
             
-            # If we hit a semicolon outside of dollar quotes, it's a statement boundary
+            # Check if this line ends a statement (semicolon outside dollar quotes)
             if ';' in line and not in_dollar_quote:
                 stmt = '\n'.join(current_statement).strip()
-                if stmt and not stmt.startswith('--'):
+                if stmt:
                     statements.append(stmt)
                 current_statement = []
         
-        # Execute each statement
-        for statement in statements:
-            if statement.strip():
+        # Execute each statement in order
+        logger.info(f"Executing {len(statements)} SQL statements...")
+        for idx, statement in enumerate(statements, 1):
+            try:
                 await conn.execute(text(statement))
+                logger.debug(f"Statement {idx}/{len(statements)} executed successfully")
+            except Exception as e:
+                logger.error(f"Failed to execute statement {idx}: {str(e)[:100]}")
+                raise
     
     logger.info("Database initialized successfully")
 
