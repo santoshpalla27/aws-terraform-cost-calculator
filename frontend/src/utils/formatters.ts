@@ -17,8 +17,12 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
 /**
  * Format a date string to a readable format
  */
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string | null | undefined): string {
+    if (!dateString) return 'N/A';
+
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+
     return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'short',
@@ -31,8 +35,12 @@ export function formatDate(dateString: string): string {
 /**
  * Format a relative time (e.g., "2 hours ago")
  */
-export function formatRelativeTime(dateString: string): string {
+export function formatRelativeTime(dateString: string | null | undefined): string {
+    if (!dateString) return 'N/A';
+
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
