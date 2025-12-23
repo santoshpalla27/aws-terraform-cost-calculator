@@ -16,6 +16,18 @@ export interface UploadRequest {
     usageOverrides?: Record<string, any>;
 }
 
+interface UploadResponseData {
+    upload: {
+        upload_id: string;
+        user_id: string;
+        filename: string;
+        file_count: number;
+        total_size: number;
+        created_at: string;
+    };
+    message: string;
+}
+
 export const uploadService = {
     /**
      * Upload Terraform files and create a new job
@@ -33,7 +45,7 @@ export const uploadService = {
             formData.append('files', file);
         });
 
-        const uploadResponse = await apiClient.post<ApiResponse<{ upload_id: string; file_count: number }>>(
+        const uploadResponse = await apiClient.post<UploadResponseData>(
             '/api/uploads',
             formData,
             {
@@ -56,11 +68,11 @@ export const uploadService = {
             }
         );
 
-        if (!uploadResponse.success || !uploadResponse.data) {
-            throw new Error(uploadResponse.error?.message || 'Failed to upload files');
+        if (!uploadResponse || !uploadResponse.upload) {
+            throw new Error('Failed to upload files - invalid response');
         }
 
-        const uploadId = uploadResponse.data.upload_id;
+        const uploadId = uploadResponse.upload.upload_id;
 
         // Step 2: Create job with upload_id
         if (onProgress) {
