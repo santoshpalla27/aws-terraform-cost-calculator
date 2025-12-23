@@ -146,7 +146,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://54.162.94.140:8080}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://44.203.71.53:8080}
         # Build-time argument for API URL
     container_name: cost-platform-frontend
     networks:
@@ -156,7 +156,7 @@ services:
       # Frontend exposed for user access
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://54.162.94.140:8080}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://44.203.71.53:8080}
       # Runtime environment for Next.js
     depends_on:
       api-gateway:
