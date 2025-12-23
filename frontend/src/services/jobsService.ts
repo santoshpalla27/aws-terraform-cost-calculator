@@ -14,16 +14,23 @@ export const jobsService = {
      * Get list of jobs with pagination and filtering
      */
     async getJobs(params?: JobListParams): Promise<PaginatedResponse<Job>> {
-        const response = await apiClient.get<ApiResponse<PaginatedResponse<Job>>>(
+        const response = await apiClient.get<any>(
             '/api/jobs',
             params
         );
 
-        if (!response.success || !response.data) {
+        if (!response.success) {
             throw new Error(response.error?.message || 'Failed to fetch jobs');
         }
 
-        return response.data;
+        // Backend returns flattened structure with pagination at top level
+        return {
+            data: response.data || [],
+            total: response.total || 0,
+            page: response.page || 1,
+            pageSize: response.pageSize || 10,
+            totalPages: response.totalPages || 0,
+        };
     },
 
     /**
