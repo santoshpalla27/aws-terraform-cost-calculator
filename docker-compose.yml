@@ -139,6 +139,7 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE}
       RATE_LIMIT_RPS: ${RATE_LIMIT_RPS:-100}
       JOB_ORCHESTRATOR_URL: http://job-orchestrator:8001
+      USAGE_ENGINE_URL: http://usage-engine:8006
       RESULTS_SERVICE_URL: http://results-service:8008
     depends_on:
       job-orchestrator:

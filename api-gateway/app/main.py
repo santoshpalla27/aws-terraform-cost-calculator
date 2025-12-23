@@ -10,7 +10,7 @@ from app.config import settings
 from app.middleware.correlation import CorrelationIDMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware, InMemoryRateLimiter
-from app.routers import health, uploads, jobs
+from app.routers import health, uploads, jobs, usage_profiles
 from app.utils.logger import setup_logging, get_logger, get_correlation_id
 
 # Setup logging
@@ -51,6 +51,7 @@ app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
 app.include_router(health.router)
 app.include_router(uploads.router)
 app.include_router(jobs.router)
+app.include_router(usage_profiles.router)
 
 
 # Global exception handlers

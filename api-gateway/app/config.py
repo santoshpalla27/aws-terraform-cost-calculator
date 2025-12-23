@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     
     # Downstream Services (MUST be set via environment variables)
     job_orchestrator_url: str = Field(..., env="JOB_ORCHESTRATOR_URL")
+    usage_engine_url: str = Field(..., env="USAGE_ENGINE_URL")
     
     class Config:
         env_file = ".env"
