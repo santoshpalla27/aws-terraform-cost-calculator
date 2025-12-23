@@ -19,6 +19,9 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
         # Set in context for logging
         set_correlation_id(correlation_id)
         
+        # CRITICAL: Attach to request.state for downstream access
+        request.state.correlation_id = correlation_id
+        
         # Process request
         response = await call_next(request)
         

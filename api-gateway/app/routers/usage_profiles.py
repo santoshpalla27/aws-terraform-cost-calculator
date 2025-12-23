@@ -3,7 +3,7 @@ Usage Profiles API router.
 Proxies requests to usage-modeling-engine.
 """
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from app.config import settings
 from app.middleware.auth import get_current_user
 from app.utils.logger import get_logger
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/usage-profiles", tags=["usage-profiles"])
 
 
 @router.get("")
-async def get_usage_profiles(request: Request, user_id: str = get_current_user):
+async def get_usage_profiles(request: Request, user_id: str = Depends(get_current_user)):
     """
     Get available usage profiles.
     
@@ -82,10 +82,12 @@ async def get_usage_profiles(request: Request, user_id: str = get_current_user):
                 f"default={default_profile}, correlation_id={correlation_id}"
             )
             
-            # Return in ApiResponse format
+            # Return in standard ApiResponse format
             return {
                 "success": True,
-                "data": transformed_profiles
+                "data": transformed_profiles,
+                "error": None,
+                "correlation_id": correlation_id
             }
             
     except httpx.TimeoutException:

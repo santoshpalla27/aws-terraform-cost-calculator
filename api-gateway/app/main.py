@@ -81,6 +81,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
+            "success": False,
+            "data": None,
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
@@ -94,17 +96,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected errors."""
-    logger.error(f"Unexpected error: {str(exc)}", exc_info=True)
+    correlation_id = get_correlation_id()
+    logger.error(f"Unexpected error: {str(exc)}", exc_info=True, extra={"correlation_id": correlation_id})
     
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
+            "success": False,
+            "data": None,
             "error": {
                 "code": "INTERNAL_ERROR",
                 "message": "An unexpected error occurred",
                 "details": str(exc) if settings.log_level == "DEBUG" else None
             },
-            "correlation_id": get_correlation_id()
+            "correlation_id": correlation_id
         }
     )
 
