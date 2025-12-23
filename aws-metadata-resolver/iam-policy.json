@@ -1,0 +1,49 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowReadOnlyAWSAPIs",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:Describe*",
+                "ec2:Get*",
+                "ec2:List*",
+                "elasticloadbalancing:Describe*",
+                "rds:Describe*",
+                "rds:List*",
+                "eks:Describe*",
+                "eks:List*",
+                "s3:GetBucket*",
+                "s3:ListBucket*",
+                "s3:GetObject*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ExplicitDenyAllWrites",
+            "Effect": "Deny",
+            "Action": [
+                "*:Create*",
+                "*:Delete*",
+                "*:Update*",
+                "*:Put*",
+                "*:Modify*",
+                "*:Terminate*",
+                "*:Stop*",
+                "*:Start*",
+                "*:Reboot*",
+                "*:Run*",
+                "*:Launch*",
+                "*:Attach*",
+                "*:Detach*",
+                "*:Associate*",
+                "*:Disassociate*",
+                "*:Enable*",
+                "*:Disable*",
+                "*:Register*",
+                "*:Deregister*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

@@ -21,6 +21,11 @@ terraform-executor-combined.txt
 plan-interpreter-combined.txt
 combine-plan-interpreter.ps1
 
+aws-metadata-resolver-combined.txt
+combine-aws-metadata-resolver.ps1
+
+combine-pricing-engine.ps1
+pricing-engine-combined.txt
 # Environment variables
 .env
 .env.local

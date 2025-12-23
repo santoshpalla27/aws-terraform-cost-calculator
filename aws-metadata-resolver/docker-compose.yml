@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  aws-metadata-resolver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aws-metadata-resolver
+    ports:
+      - "8004:8000"
+    environment:
+      - ENVIRONMENT=development
+      - AWS_REGION=us-east-1
+      - REDIS_URL=redis://redis:6379/0
+      - METADATA_CACHE_TTL=3600
+      - ENABLE_CACHE=true
+      - MAX_API_RETRIES=3
+      - ENABLE_SERVICE_ADAPTERS=ec2,ebs,elb
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/internal/health')" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - cost-calculator
+
+  redis:
+    image: redis:7-alpine
+    container_name: metadata-cache
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - cost-calculator
+
+networks:
+  cost-calculator:
+    external: true
