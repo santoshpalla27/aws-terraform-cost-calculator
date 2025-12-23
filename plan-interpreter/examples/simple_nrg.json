@@ -1,0 +1,88 @@
+{
+    "normalized_resource_graph": [
+        {
+            "resource_id": "a1b2c3d4e5f6g7h8",
+            "terraform_address": "aws_instance.web",
+            "resource_type": "aws_instance",
+            "provider": "aws",
+            "region": "us-east-1",
+            "attributes": {
+                "ami": "ami-0c55b159cbfafe1f0",
+                "instance_type": "t3.micro",
+                "availability_zone": "us-east-1a",
+                "tags": {
+                    "Name": "WebServer",
+                    "Environment": "production"
+                }
+            },
+            "unknown_attributes": [
+                "id",
+                "public_ip",
+                "arn"
+            ],
+            "quantity": 1,
+            "module_path": [],
+            "dependencies": [],
+            "confidence_level": "HIGH"
+        },
+        {
+            "resource_id": "b2c3d4e5f6g7h8i9",
+            "terraform_address": "aws_s3_bucket.data",
+            "resource_type": "aws_s3_bucket",
+            "provider": "aws",
+            "region": null,
+            "attributes": {
+                "bucket": "my-data-bucket-12345",
+                "acl": "private",
+                "versioning": {
+                    "enabled": true
+                }
+            },
+            "unknown_attributes": [
+                "id",
+                "arn"
+            ],
+            "quantity": 1,
+            "module_path": [],
+            "dependencies": [],
+            "confidence_level": "HIGH"
+        },
+        {
+            "resource_id": "c3d4e5f6g7h8i9j0",
+            "terraform_address": "module.vpc.aws_vpc.main",
+            "resource_type": "aws_vpc",
+            "provider": "aws",
+            "region": null,
+            "attributes": {
+                "cidr_block": "10.0.0.0/16",
+                "enable_dns_hostnames": true,
+                "enable_dns_support": true,
+                "tags": {
+                    "Name": "MainVPC"
+                }
+            },
+            "unknown_attributes": [
+                "id",
+                "arn"
+            ],
+            "quantity": 1,
+            "module_path": [
+                "module.vpc"
+            ],
+            "dependencies": [],
+            "confidence_level": "HIGH"
+        }
+    ],
+    "interpretation_metadata": {
+        "plan_hash": "a1b2c3d4e5f6g7h8",
+        "total_resources": 3,
+        "resources_by_type": {
+            "aws_instance": 1,
+            "aws_s3_bucket": 1,
+            "aws_vpc": 1
+        },
+        "unknown_value_count": 7,
+        "module_depth": 1,
+        "interpretation_timestamp": "2024-01-15T10:30:00Z"
+    }
+}

@@ -18,6 +18,9 @@ job-orchestrator-combined.txt
 combine-terraform-executor.ps1
 terraform-executor-combined.txt
 
+plan-interpreter-combined.txt
+combine-plan-interpreter.ps1
+
 # Environment variables
 .env
 .env.local

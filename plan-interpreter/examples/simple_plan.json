@@ -1,0 +1,74 @@
+{
+    "format_version": "1.1",
+    "terraform_version": "1.5.0",
+    "planned_values": {
+        "root_module": {
+            "resources": [
+                {
+                    "address": "aws_instance.web",
+                    "mode": "managed",
+                    "type": "aws_instance",
+                    "name": "web",
+                    "provider_name": "registry.terraform.io/hashicorp/aws",
+                    "schema_version": 1,
+                    "values": {
+                        "ami": "ami-0c55b159cbfafe1f0",
+                        "instance_type": "t3.micro",
+                        "availability_zone": "us-east-1a",
+                        "tags": {
+                            "Name": "WebServer",
+                            "Environment": "production"
+                        },
+                        "id": null,
+                        "public_ip": null,
+                        "arn": null
+                    }
+                },
+                {
+                    "address": "aws_s3_bucket.data",
+                    "mode": "managed",
+                    "type": "aws_s3_bucket",
+                    "name": "data",
+                    "provider_name": "registry.terraform.io/hashicorp/aws",
+                    "schema_version": 0,
+                    "values": {
+                        "bucket": "my-data-bucket-12345",
+                        "acl": "private",
+                        "versioning": {
+                            "enabled": true
+                        },
+                        "id": null,
+                        "arn": null
+                    }
+                }
+            ],
+            "child_modules": [
+                {
+                    "address": "module.vpc",
+                    "resources": [
+                        {
+                            "address": "module.vpc.aws_vpc.main",
+                            "mode": "managed",
+                            "type": "aws_vpc",
+                            "name": "main",
+                            "provider_name": "registry.terraform.io/hashicorp/aws",
+                            "schema_version": 1,
+                            "values": {
+                                "cidr_block": "10.0.0.0/16",
+                                "enable_dns_hostnames": true,
+                                "enable_dns_support": true,
+                                "tags": {
+                                    "Name": "MainVPC"
+                                },
+                                "id": null,
+                                "arn": null
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "resource_changes": [],
+    "configuration": {}
+}
