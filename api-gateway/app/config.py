@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     rate_limit_window: int = 60  # seconds
     
     # CORS
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: List[str] = ["*"]  # Allow all origins in production, override with CORS_ORIGINS env var
     cors_allow_credentials: bool = True
     
     # Logging
