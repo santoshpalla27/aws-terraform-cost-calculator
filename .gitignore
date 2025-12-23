@@ -36,6 +36,9 @@ cost-aggregation-engine-combined.txt
 combine-results-governance-service.ps1
 results-governance-service-combined.txt
 
+
+examples
+
 # Environment variables
 .env
 .env.local
