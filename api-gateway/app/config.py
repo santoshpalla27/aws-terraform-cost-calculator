@@ -38,7 +38,12 @@ class Settings(BaseSettings):
     rate_limit_window: int = 60  # seconds
     
     # CORS
-    cors_origins: List[str] = ["*"]  # Allow all origins in production, override with CORS_ORIGINS env var
+    # CRITICAL: Cannot use wildcard (*) with credentials=true
+    # Must use explicit origin from environment variable
+    cors_origins: List[str] = Field(
+        default=["http://localhost:3000"],
+        env="CORS_ORIGINS"
+    )
     cors_allow_credentials: bool = True
     
     # Logging

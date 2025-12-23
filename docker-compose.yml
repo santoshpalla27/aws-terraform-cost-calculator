@@ -141,6 +141,8 @@ services:
       JOB_ORCHESTRATOR_URL: http://job-orchestrator:8001
       USAGE_ENGINE_URL: http://usage-engine:8006
       RESULTS_SERVICE_URL: http://results-service:8008
+      # CRITICAL: Must use explicit origin, not wildcard, when credentials=true
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://44.203.71.53:3000}
     depends_on:
       job-orchestrator:
         condition: service_healthy
