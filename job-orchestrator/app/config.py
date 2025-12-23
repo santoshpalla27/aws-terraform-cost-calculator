@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@postgres:5432/orchestrator"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@postgres:5432/cost_governance"
     
     # Redis
     redis_url: str = "redis://redis:6379/0"
