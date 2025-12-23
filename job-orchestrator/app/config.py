@@ -34,12 +34,12 @@ class Settings(BaseSettings):
     worker_id: str = "orchestrator-1"
     
     # Downstream Services (MUST be set via environment variables)
-    terraform_execution_url: str = Field(..., env="TERRAFORM_EXECUTOR_URL")
+    terraform_executor_url: str = Field(..., env="TERRAFORM_EXECUTOR_URL")
     plan_interpreter_url: str = Field(..., env="PLAN_INTERPRETER_URL")
     metadata_resolver_url: str = Field(..., env="METADATA_RESOLVER_URL")
     pricing_engine_url: str = Field(..., env="PRICING_ENGINE_URL")
-    usage_modeling_url: str = Field(..., env="USAGE_ENGINE_URL")
-    cost_aggregation_url: str = Field(..., env="COST_ENGINE_URL")
+    usage_engine_url: str = Field(..., env="USAGE_ENGINE_URL")
+    cost_engine_url: str = Field(..., env="COST_ENGINE_URL")
     
     # Service Authentication
     service_auth_token: str = "internal-service-token"

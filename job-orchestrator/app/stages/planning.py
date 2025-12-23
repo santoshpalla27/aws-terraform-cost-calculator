@@ -19,7 +19,7 @@ class PlanningStageExecutor(BaseStageExecutor):
     
     def __init__(self):
         super().__init__("PLANNING")
-        self.terraform_url = settings.terraform_execution_url
+        self.terraform_url = settings.terraform_executor_url
         self.poll_interval = 2  # seconds
         self.max_poll_attempts = settings.planning_timeout // self.poll_interval
     
