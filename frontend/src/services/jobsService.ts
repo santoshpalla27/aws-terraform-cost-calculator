@@ -9,6 +9,23 @@ import type { CostEstimationResult } from '../types/cost';
  * NO business logic - pure API communication
  */
 
+/**
+ * Transform backend job data to frontend Job type
+ * Backend uses snake_case (job_id, created_at), frontend uses camelCase (id, createdAt)
+ */
+function transformJob(backendJob: any): Job {
+    return {
+        id: backendJob.job_id,
+        name: backendJob.name,
+        status: backendJob.status,
+        createdAt: backendJob.created_at,
+        updatedAt: backendJob.updated_at,
+        completedAt: backendJob.completed_at,
+        errorMessage: backendJob.error_message,
+        progress: backendJob.progress,
+    };
+}
+
 export const jobsService = {
     /**
      * Get list of jobs with pagination and filtering
@@ -24,8 +41,9 @@ export const jobsService = {
         }
 
         // Backend returns flattened structure with pagination at top level
+        // Transform backend jobs to frontend Job type
         return {
-            data: response.data || [],
+            data: (response.data || []).map(transformJob),
             total: response.total || 0,
             page: response.page || 1,
             pageSize: response.pageSize || 10,
@@ -37,13 +55,15 @@ export const jobsService = {
      * Get a specific job by ID
      */
     async getJob(jobId: string): Promise<Job> {
-        const response = await apiClient.get<ApiResponse<Job>>(`/api/jobs/${jobId}`);
+        const response = await apiClient.get<any>(`/api/jobs/${jobId}`);
 
         if (!response.success || !response.data) {
             throw new Error(response.error?.message || 'Failed to fetch job');
         }
 
-        return response.data;
+        // Backend returns { job: {...}, message: "..." }
+        const backendJob = response.data.job || response.data;
+        return transformJob(backendJob);
     },
 
     /**
