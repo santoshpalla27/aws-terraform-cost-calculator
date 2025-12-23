@@ -1,28 +1,23 @@
 version: '3.9'
 
 # ================================================================================
-# TERRAFORM COST INTELLIGENCE PLATFORM - PRODUCTION DOCKER COMPOSE
+# TERRAFORM COST INTELLIGENCE PLATFORM - SIMPLIFIED DOCKER COMPOSE
 # ================================================================================
-# This compose file orchestrates the entire cost calculation pipeline:
-# 1. API Gateway → Job Orchestrator → Terraform Runner → Plan Interpreter
-# 2. Plan Interpreter → AWS Metadata Resolver → Enriched Resource Graph
-# 3. Enriched Resource Graph → Pricing Engine → Unit Prices
-# 4. Enriched Resource Graph + Prices → Usage Engine → Usage Assumptions
-# 5. ERG + Prices + Usage → Cost Engine → Final Cost Model
-# 6. Final Cost Model → Results Service → PostgreSQL (System of Record)
+# This compose file includes only the implemented services:
+# - Infrastructure: PostgreSQL, Redis
+# - Services: Plan Interpreter, AWS Metadata Resolver, Pricing Engine,
+#   Usage Engine, Cost Engine, Results Service, Frontend
+# - Orchestration: API Gateway, Job Orchestrator
 # ================================================================================
 
 networks:
   cost-platform:
     driver: bridge
-    # Internal network for service-to-service communication
-    # Only api-gateway exposes ports to host
 
 volumes:
-  postgres_data: # Persistent storage for cost results, audit logs, historical data
-  redis_data: # Persistent cache for pricing and metadata
-  usage_profiles:
-    # Read-only volume for usage profile YAML files
+  postgres_data:
+  redis_data:
+
 
 services:
   # ============================================================================
@@ -38,16 +33,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-cost_governance}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      # Use environment variables, NOT hardcoded secrets
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Persistent volume for ACID-compliant cost data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
       interval: 10s
       timeout: 5s
       retries: 5
-      # Ensures database is ready before dependent services start
     restart: unless-stopped
     deploy:
       resources:
@@ -69,10 +61,8 @@ services:
     networks:
       - cost-platform
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
-    # Append-only for durability, LRU eviction for cache management
     volumes:
       - redis_data:/data
-      # Persistent cache for pricing and metadata
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -97,71 +87,22 @@ services:
   # APPLICATION SERVICES
   # ============================================================================
 
-  api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
-    container_name: cost-platform-api-gateway
-    networks:
-      - cost-platform
-    ports:
-      - "8080:8080"
-      # ONLY service exposed to host - public entrypoint
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-production}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      LOG_FORMAT: json
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-      RATE_LIMIT_RPS: ${RATE_LIMIT_RPS:-100}
-      JOB_ORCHESTRATOR_URL: http://job-orchestrator:8001
-      RESULTS_SERVICE_URL: http://results-service:8008
-      # Service discovery via Docker DNS
-    depends_on:
-      job-orchestrator:
-        condition: service_started
-      results-service:
-        condition: service_started
-      # Gateway requires orchestrator and results service
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-      # Prevent privilege escalation
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://44.203.71.53:8080}
-        # Build-time argument for API URL
     container_name: cost-platform-frontend
     networks:
       - cost-platform
     ports:
       - "3000:3000"
-      # Frontend exposed for user access
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://44.203.71.53:8080}
-      # Runtime environment for Next.js
     depends_on:
-      api-gateway:
-        condition: service_started
-      # Frontend requires API gateway
+      - api-gateway
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -172,10 +113,47 @@ services:
         limits:
           cpus: '1.0'
           memory: 1G
-          # Next.js can be memory-intensive
         reservations:
           cpus: '0.25'
           memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: cost-platform-api-gateway
+    networks:
+      - cost-platform
+    ports:
+      - "8080:8080"
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: json
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      RATE_LIMIT_RPS: ${RATE_LIMIT_RPS:-100}
+      JOB_ORCHESTRATOR_URL: http://job-orchestrator:8001
+      RESULTS_SERVICE_URL: http://results-service:8008
+    depends_on:
+      - job-orchestrator
+      - results-service
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     logging:
       driver: "json-file"
       options:
@@ -195,30 +173,21 @@ services:
       LOG_FORMAT: json
       JOB_TIMEOUT_SECONDS: ${JOB_TIMEOUT_SECONDS:-300}
       MAX_RETRIES: ${MAX_RETRIES:-3}
-      TERRAFORM_RUNNER_URL: http://terraform-runner:8002
+      TERRAFORM_EXECUTOR_URL: http://terraform-executor:8002
       PLAN_INTERPRETER_URL: http://plan-interpreter:8003
       METADATA_RESOLVER_URL: http://aws-metadata-resolver:8004
       PRICING_ENGINE_URL: http://pricing-engine:8005
       USAGE_ENGINE_URL: http://usage-engine:8006
       COST_ENGINE_URL: http://cost-engine:8007
       RESULTS_SERVICE_URL: http://results-service:8008
-      # Orchestrator knows all downstream services
     depends_on:
-      terraform-runner:
-        condition: service_started
-      plan-interpreter:
-        condition: service_started
-      aws-metadata-resolver:
-        condition: service_started
-      pricing-engine:
-        condition: service_started
-      usage-engine:
-        condition: service_started
-      cost-engine:
-        condition: service_started
-      results-service:
-        condition: service_started
-      # Orchestrator depends on entire pipeline
+      - terraform-executor
+      - plan-interpreter
+      - aws-metadata-resolver
+      - pricing-engine
+      - usage-engine
+      - cost-engine
+      - results-service
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -236,11 +205,11 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  terraform-runner:
+  terraform-executor:
     build:
-      context: ./terraform-runner
+      context: ./terraform-executor
       dockerfile: Dockerfile
-    container_name: cost-platform-terraform-runner
+    container_name: cost-platform-terraform-executor
     networks:
       - cost-platform
     environment:
@@ -249,26 +218,20 @@ services:
       LOG_FORMAT: json
       TERRAFORM_VERSION: ${TERRAFORM_VERSION:-1.6.0}
       EXECUTION_TIMEOUT: ${EXECUTION_TIMEOUT:-180}
-      # Terraform execution is time-limited
     restart: unless-stopped
     read_only: true
-    # Read-only root filesystem for security
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=512m
-      # Writable temp directory for Terraform execution
     security_opt:
       - no-new-privileges:true
       - seccomp:unconfined
-      # Terraform may need syscalls, but no privilege escalation
     cap_drop:
       - ALL
-      # Drop all capabilities by default
     deploy:
       resources:
         limits:
           cpus: '2.0'
           memory: 2G
-          # Terraform can be CPU/memory intensive
         reservations:
           cpus: '0.5'
           memory: 512M
@@ -289,10 +252,8 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FORMAT: json
-      # Stateless service - no persistent config needed
     depends_on:
-      - terraform-runner
-      # Interprets output from Terraform runner
+      - terraform-executor
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -330,16 +291,12 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
-      # Use IAM role or environment variables for AWS credentials
-      # NEVER hardcode credentials
       METADATA_CACHE_TTL: ${METADATA_CACHE_TTL:-3600}
       REDIS_URL: redis://redis:6379/0
       ENABLE_CACHE: "true"
-      # Redis cache for AWS API responses
     depends_on:
       redis:
         condition: service_healthy
-      # Requires Redis for caching
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -374,11 +331,9 @@ services:
       SUPPORTED_SERVICES: ${SUPPORTED_SERVICES:-ec2,ebs,elb,rds}
       REDIS_URL: redis://redis:6379/1
       ENABLE_CACHE: "true"
-      # Pricing data cached for 24h by default
     depends_on:
       redis:
         condition: service_healthy
-      # Requires Redis for pricing cache
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -389,7 +344,6 @@ services:
         limits:
           cpus: '2.0'
           memory: 2G
-          # Pricing normalization can be CPU-intensive
         reservations:
           cpus: '0.5'
           memory: 512M
@@ -412,10 +366,8 @@ services:
       LOG_FORMAT: json
       DEFAULT_USAGE_PROFILE: ${DEFAULT_USAGE_PROFILE:-prod}
       PROFILES_PATH: /app/profiles
-      # Usage profiles mounted as read-only volume
     volumes:
       - ./usage-modeling-engine/profiles:/app/profiles:ro
-      # Read-only mount of usage profile YAML files
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -449,7 +401,6 @@ services:
       DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-USD}
       DECIMAL_PRECISION: ${DECIMAL_PRECISION:-28}
       ENABLE_DETERMINISM_HASH: "true"
-      # Pure computation service - deterministic output
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -463,7 +414,6 @@ services:
         limits:
           cpus: '2.0'
           memory: 2G
-          # Cost aggregation can be CPU-intensive
         reservations:
           cpus: '0.5'
           memory: 512M
@@ -488,11 +438,9 @@ services:
       ENABLE_AUDIT_LOG: "true"
       RETENTION_DAYS: ${RETENTION_DAYS:-365}
       POLICY_PATH: /app/policies
-      # System of record - append-only, immutable audit trail
     depends_on:
       postgres:
         condition: service_healthy
-      # Requires PostgreSQL for persistence
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -511,46 +459,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-# ================================================================================
-# PRODUCTION DEPLOYMENT NOTES
-# ================================================================================
-# 1. SECRETS MANAGEMENT:
-#    - Use Docker secrets or external secret management (Vault, AWS Secrets Manager)
-#    - Never commit .env files with real credentials
-#
-# 2. NETWORKING:
-#    - Only api-gateway is exposed (port 8080)
-#    - All other services communicate via internal Docker network
-#    - Use reverse proxy (Traefik/NGINX) in front of api-gateway for TLS
-#
-# 3. RESOURCE LIMITS:
-#    - CPU/memory limits prevent noisy-neighbor issues
-#    - Adjust based on workload characteristics
-#
-# 4. PERSISTENCE:
-#    - postgres_data: ACID-compliant cost results
-#    - redis_data: Pricing and metadata cache
-#    - Backup volumes regularly
-#
-# 5. OBSERVABILITY:
-#    - All services log to stdout (JSON format)
-#    - Use log aggregation (ELK, Loki, CloudWatch)
-#    - Structured logs enable querying and alerting
-#
-# 6. SECURITY:
-#    - Read-only filesystems where possible
-#    - Capabilities dropped by default
-#    - No privilege escalation
-#    - Use non-root containers (add USER directive in Dockerfiles)
-#
-# 7. HIGH AVAILABILITY:
-#    - For production, run multiple instances behind load balancer
-#    - Use managed PostgreSQL (RDS) and Redis (ElastiCache)
-#    - Implement health checks and circuit breakers
-#
-# 8. CI/CD INTEGRATION:
-#    - Mount CI workspace as volume for Terraform execution
-#    - Use job-orchestrator API for cost gate decisions
-#    - Results service provides historical comparisons
-# ================================================================================
