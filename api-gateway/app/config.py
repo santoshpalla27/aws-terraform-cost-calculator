@@ -3,6 +3,7 @@ Configuration management for API Gateway.
 All configuration loaded from environment variables.
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List
 
 
@@ -44,8 +45,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
     
-    # Downstream Services
-    job_orchestrator_url: str = "http://localhost:8001"
+    # Downstream Services (MUST be set via environment variables)
+    job_orchestrator_url: str = Field(..., env="JOB_ORCHESTRATOR_URL")
     
     class Config:
         env_file = ".env"

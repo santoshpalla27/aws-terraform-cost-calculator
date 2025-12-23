@@ -92,7 +92,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://44.203.71.53:8080}
+        NEXT_PUBLIC_API_URL: /api
     container_name: cost-platform-frontend
     networks:
       - cost-platform
@@ -100,7 +100,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://44.203.71.53:8080}
+      NEXT_PUBLIC_API_URL: /api
     depends_on:
       - api-gateway
     restart: unless-stopped
@@ -141,8 +141,8 @@ services:
       JOB_ORCHESTRATOR_URL: http://job-orchestrator:8001
       RESULTS_SERVICE_URL: http://results-service:8008
     depends_on:
-      - job-orchestrator
-      - results-service
+      job-orchestrator:
+        condition: service_healthy
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -181,13 +181,16 @@ services:
       COST_ENGINE_URL: http://cost-engine:8007
       RESULTS_SERVICE_URL: http://results-service:8008
     depends_on:
-      - terraform-executor
-      - plan-interpreter
-      - aws-metadata-resolver
-      - pricing-engine
-      - usage-engine
-      - cost-engine
-      - results-service
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      terraform-executor:
+        condition: service_healthy
+      plan-interpreter:
+        condition: service_healthy
+      aws-metadata-resolver:
+        condition: service_healthy
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -218,6 +221,7 @@ services:
       LOG_FORMAT: json
       TERRAFORM_VERSION: ${TERRAFORM_VERSION:-1.6.0}
       EXECUTION_TIMEOUT: ${EXECUTION_TIMEOUT:-180}
+      REDIS_URL: redis://redis:6379/0
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -294,9 +298,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FORMAT: json
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      # AWS credentials should come from IAM role or instance metadata
+      # DO NOT set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN
       METADATA_CACHE_TTL: ${METADATA_CACHE_TTL:-3600}
       REDIS_URL: redis://redis:6379/0
       ENABLE_CACHE: "true"

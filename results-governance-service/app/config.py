@@ -2,6 +2,7 @@
 Configuration management for Results & Governance Service.
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from pathlib import Path
 
 
@@ -11,8 +12,8 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
     
-    # Database
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/cost_governance"
+    # Database (MUST be set via environment variables)
+    database_url: str = Field(..., env="DATABASE_URL")
     
     # Audit
     enable_audit_log: bool = True

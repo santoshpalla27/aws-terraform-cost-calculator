@@ -2,6 +2,7 @@
 Configuration management for Pricing Engine.
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List
 
 
@@ -19,8 +20,8 @@ class Settings(BaseSettings):
     # Supported Services (ONLY implemented normalizers)
     supported_services: str = "ec2,ebs,elb,rds"
     
-    # Cache
-    redis_url: str = "redis://localhost:6379/1"
+    # Cache (MUST be set via environment variables)
+    redis_url: str = Field(..., env="REDIS_URL")
     enable_cache: bool = True
     
     # Logging

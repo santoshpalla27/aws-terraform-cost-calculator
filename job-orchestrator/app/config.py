@@ -3,6 +3,7 @@ Configuration management for Job Orchestrator.
 All configuration loaded from environment variables.
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import Dict
 
 
@@ -32,13 +33,13 @@ class Settings(BaseSettings):
     lock_ttl: int = 300  # 5 minutes
     worker_id: str = "orchestrator-1"
     
-    # Downstream Services
-    terraform_execution_url: str = "http://localhost:8001"
-    plan_interpreter_url: str = "http://localhost:8002"
-    metadata_resolver_url: str = "http://localhost:8003"
-    pricing_engine_url: str = "http://localhost:8004"
-    usage_modeling_url: str = "http://localhost:8005"
-    cost_aggregation_url: str = "http://localhost:8006"
+    # Downstream Services (MUST be set via environment variables)
+    terraform_execution_url: str = Field(..., env="TERRAFORM_EXECUTOR_URL")
+    plan_interpreter_url: str = Field(..., env="PLAN_INTERPRETER_URL")
+    metadata_resolver_url: str = Field(..., env="METADATA_RESOLVER_URL")
+    pricing_engine_url: str = Field(..., env="PRICING_ENGINE_URL")
+    usage_modeling_url: str = Field(..., env="USAGE_ENGINE_URL")
+    cost_aggregation_url: str = Field(..., env="COST_ENGINE_URL")
     
     # Service Authentication
     service_auth_token: str = "internal-service-token"

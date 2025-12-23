@@ -3,6 +3,7 @@ Job service.
 Handles job creation and orchestration initiation.
 """
 import uuid
+import httpx
 from typing import List, Optional
 from fastapi import HTTPException, status
 from app.config import settings
@@ -68,10 +69,35 @@ class JobService:
             extra={'job_id': job_id, 'upload_id': request.upload_id}
         )
         
-        # TODO: Trigger job orchestrator (future implementation)
-        # await self._trigger_orchestrator(job)
+        # Trigger job orchestrator
+        try:
+            await self._trigger_orchestrator(job)
+        except Exception as e:
+            logger.error(f"Failed to trigger orchestrator for job {job_id}: {e}")
+            # Don't fail job creation if orchestrator trigger fails
+            # Job can be retried later
         
         return job
+    
+    async def _trigger_orchestrator(self, job: Job, correlation_id: str = None) -> None:
+        """
+        Trigger job orchestrator to start processing.
+        
+        Args:
+            job: Job to start
+            correlation_id: Optional correlation ID for tracing
+        """
+        headers = {"Authorization": f"Bearer {settings.service_auth_token}"}
+        if correlation_id:
+            headers["X-Correlation-ID"] = correlation_id
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{settings.job_orchestrator_url}/internal/jobs/{job.job_id}/start",
+                headers=headers
+            )
+            response.raise_for_status()
+            logger.info(f"Triggered orchestrator for job {job.job_id}")
     
     async def get_job(self, job_id: str, user_id: str) -> Job:
         """

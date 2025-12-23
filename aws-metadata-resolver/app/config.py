@@ -2,6 +2,7 @@
 Configuration management for AWS Metadata Resolver.
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List
 
 
@@ -15,8 +16,8 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
     aws_role_arn: str = ""
     
-    # Cache Configuration
-    redis_url: str = "redis://localhost:6379/0"
+    # Cache Configuration (MUST be set via environment variables)
+    redis_url: str = Field(..., env="REDIS_URL")
     metadata_cache_ttl: int = 3600  # 1 hour
     enable_cache: bool = True
     
