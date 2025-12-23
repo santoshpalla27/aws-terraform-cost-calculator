@@ -25,22 +25,24 @@ RUN mkdir -p /opt/terraform/plugins
 WORKDIR /tmp/provider-init
 
 # Create minimal terraform config to download providers
-RUN echo 'terraform { \n\
-    required_providers { \n\
-    aws = { \n\
-    source  = "hashicorp/aws" \n\
-    version = "~> 5.0" \n\
-    } \n\
-    random = { \n\
-    source  = "hashicorp/random" \n\
-    version = "~> 3.0" \n\
-    } \n\
-    null = { \n\
-    source  = "hashicorp/null" \n\
-    version = "~> 3.0" \n\
-    } \n\
-    } \n\
-    }' > main.tf
+RUN cat > main.tf <<'EOF'
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
+  }
+}
+EOF
 
 # Download providers to plugin directory
 RUN terraform init -plugin-dir=/opt/terraform/plugins
