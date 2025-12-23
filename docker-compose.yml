@@ -141,6 +141,47 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://54.162.94.140:8080}
+        # Build-time argument for API URL
+    container_name: cost-platform-frontend
+    networks:
+      - cost-platform
+    ports:
+      - "3000:3000"
+      # Frontend exposed for user access
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://54.162.94.140:8080}
+      # Runtime environment for Next.js
+    depends_on:
+      api-gateway:
+        condition: service_started
+      # Frontend requires API gateway
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+          # Next.js can be memory-intensive
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   job-orchestrator:
     build:
       context: ./job-orchestrator
