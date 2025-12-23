@@ -7,7 +7,7 @@ from app.models.responses import UploadResponse
 from app.services.upload_service import upload_service
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/uploads", tags=["uploads"])
+router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
 
 @router.post("", response_model=UploadResponse)

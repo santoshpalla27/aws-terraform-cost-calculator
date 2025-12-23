@@ -95,6 +95,10 @@ async def get_current_user(request: Request) -> str:
     Raises:
         HTTPException: If user is not authenticated
     """
+    # Return anonymous if auth is disabled
+    if not settings.auth_enabled:
+        return "anonymous"
+    
     if not hasattr(request.state, 'user_id'):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -11,7 +11,7 @@ from app.services.job_service import job_service
 from app.middleware.auth import get_current_user
 import math
 
-router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
+router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
 
 @router.post("", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
