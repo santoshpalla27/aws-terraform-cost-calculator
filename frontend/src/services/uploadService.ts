@@ -19,28 +19,22 @@ export interface UploadRequest {
 export const uploadService = {
     /**
      * Upload Terraform files and create a new job
+     * Two-step process:
+     * 1. Upload files to /api/uploads
+     * 2. Create job with /api/jobs using upload_id
      */
     async uploadFiles(
         request: UploadRequest,
         onProgress?: (progress: UploadProgress) => void
     ): Promise<Job> {
+        // Step 1: Upload files
         const formData = new FormData();
-        formData.append('name', request.name);
-
-        if (request.usageProfileId) {
-            formData.append('usageProfileId', request.usageProfileId);
-        }
-
-        if (request.usageOverrides) {
-            formData.append('usageOverrides', JSON.stringify(request.usageOverrides));
-        }
-
         request.files.forEach((file) => {
             formData.append('files', file);
         });
 
-        const response = await apiClient.post<ApiResponse<Job>>(
-            '/api/jobs',
+        const uploadResponse = await apiClient.post<ApiResponse<{ upload_id: string; file_count: number }>>(
+            '/api/uploads',
             formData,
             {
                 headers: {
@@ -48,8 +42,9 @@ export const uploadService = {
                 },
                 onUploadProgress: (progressEvent: any) => {
                     if (onProgress && progressEvent.total) {
+                        // Show 0-80% for file upload
                         const percentage = Math.round(
-                            (progressEvent.loaded * 100) / progressEvent.total
+                            (progressEvent.loaded * 80) / progressEvent.total
                         );
                         onProgress({
                             loaded: progressEvent.loaded,
@@ -61,10 +56,34 @@ export const uploadService = {
             }
         );
 
-        if (!response.success || !response.data) {
-            throw new Error(response.error?.message || 'Failed to upload files');
+        if (!uploadResponse.success || !uploadResponse.data) {
+            throw new Error(uploadResponse.error?.message || 'Failed to upload files');
         }
 
-        return response.data;
+        const uploadId = uploadResponse.data.upload_id;
+
+        // Step 2: Create job with upload_id
+        if (onProgress) {
+            onProgress({ loaded: 80, total: 100, percentage: 80 });
+        }
+
+        const jobResponse = await apiClient.post<ApiResponse<Job>>(
+            '/api/jobs',
+            {
+                upload_id: uploadId,
+                name: request.name,
+                usage_profile_id: request.usageProfileId || null,
+            }
+        );
+
+        if (!jobResponse.success || !jobResponse.data) {
+            throw new Error(jobResponse.error?.message || 'Failed to create job');
+        }
+
+        if (onProgress) {
+            onProgress({ loaded: 100, total: 100, percentage: 100 });
+        }
+
+        return jobResponse.data;
     },
 };
