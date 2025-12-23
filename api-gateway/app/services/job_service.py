@@ -87,7 +87,12 @@ class JobService:
             job: Job to start
             correlation_id: Optional correlation ID for tracing
         """
-        headers = {"Authorization": f"Bearer {settings.service_auth_token}"}
+        headers = {}
+        
+        # Add auth header only if service_auth_token is configured
+        if settings.service_auth_token:
+            headers["Authorization"] = f"Bearer {settings.service_auth_token}"
+        
         if correlation_id:
             headers["X-Correlation-ID"] = correlation_id
         

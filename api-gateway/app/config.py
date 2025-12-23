@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     job_orchestrator_url: str = Field(..., env="JOB_ORCHESTRATOR_URL")
     usage_engine_url: str = Field(..., env="USAGE_ENGINE_URL")
     
+    # Service-to-service authentication (optional)
+    service_auth_token: str = Field(default="", env="SERVICE_AUTH_TOKEN")
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
