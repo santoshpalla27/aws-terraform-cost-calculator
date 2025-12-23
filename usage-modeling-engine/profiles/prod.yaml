@@ -1,0 +1,117 @@
+# Production Usage Profile
+# High availability, 24x7 uptime, realistic data transfer
+
+version: v1
+name: prod
+description: Production environment usage profile
+
+# Global settings
+global:
+  uptime_percentage: 100  # 24x7
+  availability_percentage: 99.9
+  data_transfer_multiplier: 1.0
+
+# EC2 Instance Usage
+ec2:
+  instance:
+    uptime_hours_per_month:
+      min: 672   # ~93% uptime (allowing for maintenance)
+      expected: 730  # Full month
+      max: 730   # Full month
+    cpu_utilization_percentage:
+      min: 30
+      expected: 50
+      max: 80
+    assumptions:
+      - "24x7 uptime for production workloads"
+      - "Moderate to high CPU utilization"
+      - "Autoscaling enabled for peak loads"
+
+# EBS Volume Usage
+ebs:
+  volume:
+    storage_gb_month:
+      multiplier: 1.0  # Full month
+    snapshot_frequency_days: 1
+    snapshot_retention_count: 30
+    assumptions:
+      - "Daily snapshots for data protection"
+      - "30-day retention for compliance"
+
+# ELB Usage
+elb:
+  load_balancer:
+    uptime_hours_per_month:
+      min: 672
+      expected: 730
+      max: 730
+  lcu:
+    usage_per_hour:
+      min: 2.0
+      expected: 5.0
+      max: 20.0
+    assumptions:
+      - "Production traffic levels"
+      - "Moderate to high LCU consumption"
+
+# RDS Usage
+rds:
+  instance:
+    uptime_hours_per_month:
+      min: 672
+      expected: 730
+      max: 730
+  storage:
+    growth_rate_percentage_per_month: 5
+  backup:
+    retention_days: 7
+    assumptions:
+      - "7-day backup retention"
+      - "Steady storage growth"
+
+# NAT Gateway Usage
+nat:
+  gateway:
+    uptime_hours_per_month:
+      min: 672
+      expected: 730
+      max: 730
+  data_processed_gb_per_month:
+    min: 500
+    expected: 1000
+    max: 5000
+  assumptions:
+    - "Production data transfer volumes"
+    - "24x7 availability"
+
+# CloudWatch Usage
+cloudwatch:
+  logs:
+    ingestion_gb_per_day:
+      min: 5.0
+      expected: 10.0
+      max: 50.0
+  metrics:
+    custom_metrics_count:
+      min: 100
+      expected: 500
+      max: 1000
+  assumptions:
+    - "Comprehensive logging enabled"
+    - "Detailed monitoring and alerting"
+
+# EKS Usage
+eks:
+  control_plane:
+    uptime_hours_per_month:
+      min: 672
+      expected: 730
+      max: 730
+  node_group:
+    utilization_percentage:
+      min: 50
+      expected: 70
+      max: 90
+  assumptions:
+    - "Production clusters run 24x7"
+    - "High node utilization with autoscaling"

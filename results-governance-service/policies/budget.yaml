@@ -1,0 +1,32 @@
+# Budget Policy
+# Enforce cost thresholds
+
+version: v1
+name: budget
+description: Budget threshold policy
+
+rules:
+  - rule_id: expected_cost_threshold
+    rule_type: threshold
+    description: Expected cost must not exceed threshold
+    parameters:
+      max_expected_cost: 1000.0  # USD
+      currency: USD
+    severity: error
+  
+  - rule_id: max_cost_threshold
+    rule_type: threshold
+    description: Max cost must not exceed threshold
+    parameters:
+      max_cost: 1500.0  # USD
+      currency: USD
+    severity: error
+  
+  - rule_id: service_budget_ec2
+    rule_type: threshold
+    description: EC2 costs must stay under budget
+    parameters:
+      service: ec2
+      max_expected_cost: 500.0  # USD
+      currency: USD
+    severity: warning

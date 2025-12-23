@@ -1,0 +1,117 @@
+# Development Usage Profile
+# Low utilization, short uptime, minimal data transfer
+
+version: v1
+name: dev
+description: Development environment usage profile
+
+# Global settings
+global:
+  uptime_percentage: 22  # ~8h/day, 5 days/week (40h/week out of 168h)
+  availability_percentage: 50
+  data_transfer_multiplier: 0.1
+
+# EC2 Instance Usage
+ec2:
+  instance:
+    uptime_hours_per_month:
+      min: 80    # ~4h/day, 5 days/week
+      expected: 160  # ~8h/day, 5 days/week
+      max: 320   # ~16h/day, 5 days/week
+    cpu_utilization_percentage:
+      min: 10
+      expected: 25
+      max: 50
+    assumptions:
+      - "Development instances run during business hours only"
+      - "Low CPU utilization expected"
+      - "No autoscaling configured"
+
+# EBS Volume Usage
+ebs:
+  volume:
+    storage_gb_month:
+      multiplier: 1.0  # Full month
+    snapshot_frequency_days: 7
+    snapshot_retention_count: 2
+    assumptions:
+      - "Minimal snapshot retention"
+      - "Weekly snapshots only"
+
+# ELB Usage
+elb:
+  load_balancer:
+    uptime_hours_per_month:
+      min: 80
+      expected: 160
+      max: 320
+  lcu:
+    usage_per_hour:
+      min: 0.1
+      expected: 0.5
+      max: 2.0
+    assumptions:
+      - "Low traffic expected"
+      - "Minimal LCU consumption"
+
+# RDS Usage
+rds:
+  instance:
+    uptime_hours_per_month:
+      min: 80
+      expected: 160
+      max: 320
+  storage:
+    growth_rate_percentage_per_month: 2
+  backup:
+    retention_days: 1
+    assumptions:
+      - "Minimal backup retention"
+      - "Low storage growth"
+
+# NAT Gateway Usage
+nat:
+  gateway:
+    uptime_hours_per_month:
+      min: 80
+      expected: 160
+      max: 320
+  data_processed_gb_per_month:
+    min: 10
+    expected: 50
+    max: 100
+  assumptions:
+    - "Minimal data transfer"
+    - "Development workloads only"
+
+# CloudWatch Usage
+cloudwatch:
+  logs:
+    ingestion_gb_per_day:
+      min: 0.1
+      expected: 0.5
+      max: 2.0
+  metrics:
+    custom_metrics_count:
+      min: 10
+      expected: 50
+      max: 100
+  assumptions:
+    - "Minimal logging"
+    - "Basic monitoring only"
+
+# EKS Usage
+eks:
+  control_plane:
+    uptime_hours_per_month:
+      min: 80
+      expected: 160
+      max: 320
+  node_group:
+    utilization_percentage:
+      min: 20
+      expected: 40
+      max: 60
+  assumptions:
+    - "Development clusters run part-time"
+    - "Low node utilization"

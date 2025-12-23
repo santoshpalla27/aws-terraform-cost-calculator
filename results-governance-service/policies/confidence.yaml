@@ -1,0 +1,22 @@
+# Confidence Policy
+# Enforce confidence requirements
+
+version: v1
+name: confidence
+description: Confidence requirement policy
+
+rules:
+  - rule_id: minimum_confidence
+    rule_type: confidence
+    description: Overall confidence must be at least MEDIUM
+    parameters:
+      min_confidence: MEDIUM  # HIGH, MEDIUM, or LOW
+    severity: error
+  
+  - rule_id: high_confidence_preferred
+    rule_type: confidence
+    description: HIGH confidence is preferred for production
+    parameters:
+      min_confidence: HIGH
+      environment: prod
+    severity: warning

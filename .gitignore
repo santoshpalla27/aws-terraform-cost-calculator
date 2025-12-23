@@ -24,8 +24,18 @@ combine-plan-interpreter.ps1
 aws-metadata-resolver-combined.txt
 combine-aws-metadata-resolver.ps1
 
+combine-usage-modeling-engine.ps1
+usage-modeling-engine-combined.txt
+
 combine-pricing-engine.ps1
 pricing-engine-combined.txt
+
+combine-cost-aggregation-engine.ps1
+cost-aggregation-engine-combined.txt
+
+combine-results-governance-service.ps1
+results-governance-service-combined.txt
+
 # Environment variables
 .env
 .env.local

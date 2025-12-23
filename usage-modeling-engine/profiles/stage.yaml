@@ -1,0 +1,117 @@
+# Staging Usage Profile
+# Medium utilization, business hours uptime, moderate data transfer
+
+version: v1
+name: stage
+description: Staging environment usage profile
+
+# Global settings
+global:
+  uptime_percentage: 75  # Business hours + testing
+  availability_percentage: 95
+  data_transfer_multiplier: 0.5
+
+# EC2 Instance Usage
+ec2:
+  instance:
+    uptime_hours_per_month:
+      min: 320   # ~50% uptime
+      expected: 540  # ~75% uptime
+      max: 730   # Full month during testing
+    cpu_utilization_percentage:
+      min: 20
+      expected: 40
+      max: 70
+    assumptions:
+      - "Staging runs during business hours and testing periods"
+      - "Moderate CPU utilization"
+      - "Limited autoscaling"
+
+# EBS Volume Usage
+ebs:
+  volume:
+    storage_gb_month:
+      multiplier: 1.0  # Full month
+    snapshot_frequency_days: 3
+    snapshot_retention_count: 7
+    assumptions:
+      - "Snapshots every 3 days"
+      - "7-day retention"
+
+# ELB Usage
+elb:
+  load_balancer:
+    uptime_hours_per_month:
+      min: 320
+      expected: 540
+      max: 730
+  lcu:
+    usage_per_hour:
+      min: 0.5
+      expected: 2.0
+      max: 10.0
+    assumptions:
+      - "Moderate traffic for testing"
+      - "Medium LCU consumption"
+
+# RDS Usage
+rds:
+  instance:
+    uptime_hours_per_month:
+      min: 320
+      expected: 540
+      max: 730
+  storage:
+    growth_rate_percentage_per_month: 3
+  backup:
+    retention_days: 3
+    assumptions:
+      - "3-day backup retention"
+      - "Moderate storage growth"
+
+# NAT Gateway Usage
+nat:
+  gateway:
+    uptime_hours_per_month:
+      min: 320
+      expected: 540
+      max: 730
+  data_processed_gb_per_month:
+    min: 100
+    expected: 300
+    max: 1000
+  assumptions:
+    - "Moderate data transfer"
+    - "Testing and staging workloads"
+
+# CloudWatch Usage
+cloudwatch:
+  logs:
+    ingestion_gb_per_day:
+      min: 1.0
+      expected: 3.0
+      max: 10.0
+  metrics:
+    custom_metrics_count:
+      min: 50
+      expected: 200
+      max: 500
+  assumptions:
+    - "Moderate logging"
+    - "Standard monitoring"
+
+# EKS Usage
+eks:
+  control_plane:
+    uptime_hours_per_month:
+      min: 320
+      expected: 540
+      max: 730
+  node_group:
+    utilization_percentage:
+      min: 30
+      expected: 50
+      max: 75
+  assumptions:
+    - "Staging clusters run during business hours"
+    - "Medium node utilization"

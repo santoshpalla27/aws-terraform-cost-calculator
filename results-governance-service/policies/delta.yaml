@@ -1,0 +1,24 @@
+# Delta Policy
+# Enforce cost increase limits
+
+version: v1
+name: delta
+description: Cost increase limit policy
+
+rules:
+  - rule_id: max_cost_increase_percentage
+    rule_type: delta
+    description: Cost increase must be less than threshold
+    parameters:
+      max_increase_percentage: 20.0  # 20% increase allowed
+      scenario: expected
+    severity: error
+  
+  - rule_id: max_cost_increase_absolute
+    rule_type: delta
+    description: Absolute cost increase must be less than threshold
+    parameters:
+      max_increase_absolute: 200.0  # USD
+      scenario: expected
+      currency: USD
+    severity: warning
