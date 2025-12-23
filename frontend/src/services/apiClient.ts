@@ -75,11 +75,23 @@ class ApiClient {
      */
     private handleError(error: unknown): never {
         if (axios.isAxiosError(error)) {
-            const message =
-                error.response?.data?.error?.message ||
-                error.message ||
-                'An unexpected error occurred';
-            throw new Error(message);
+            const responseData = error.response?.data;
+            const errorMessage = responseData?.error?.message || error.message || 'An unexpected error occurred';
+            const correlationId = responseData?.correlation_id;
+
+            const enhancedError = new Error(errorMessage);
+            (enhancedError as any).correlationId = correlationId;
+            (enhancedError as any).errorCode = responseData?.error?.code;
+
+            console.error('[API Error]', {
+                message: errorMessage,
+                code: responseData?.error?.code,
+                correlationId,
+                url: error.config?.url,
+                status: error.response?.status
+            });
+
+            throw enhancedError;
         }
         throw error;
     }

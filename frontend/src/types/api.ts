@@ -4,12 +4,13 @@
 
 export interface ApiResponse<T> {
     success: boolean;
-    data?: T;
-    error?: {
+    data: T | null;
+    error: {
         code: string;
         message: string;
         details?: any;
-    };
+    } | null;
+    correlation_id: string;
 }
 
 export interface PaginatedResponse<T> {

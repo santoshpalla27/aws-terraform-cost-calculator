@@ -61,9 +61,8 @@ export const jobsService = {
             throw new Error(response.error?.message || 'Failed to fetch job');
         }
 
-        // Backend returns { job: {...}, message: "..." }
-        const backendJob = response.data.job || response.data;
-        return transformJob(backendJob);
+        // Backend returns job directly in data field
+        return transformJob(response.data);
     },
 
     /**

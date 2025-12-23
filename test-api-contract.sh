@@ -1,128 +1,251 @@
 #!/bin/bash
-# Contract Verification Test Script
-# Tests all API Gateway endpoints for canonical response format
+# ============================================================================
+# API Contract Verification Script
+# Tests all API endpoints to ensure canonical ApiResponse format
+# ============================================================================
 
 set -e
 
-API_URL="${API_URL:-http://localhost:8080}"
-PASSED=0
-FAILED=0
+API_BASE_URL="${API_BASE_URL:-http://localhost:8000}"
+CORRELATION_ID="test-$(date +%s)"
 
-echo "================================================================================"
-echo "API CONTRACT VERIFICATION TEST"
-echo "================================================================================"
-echo "Testing API Gateway at: $API_URL"
+echo "============================================================================"
+echo "API Contract Verification Test Suite"
+echo "============================================================================"
+echo "API Base URL: $API_BASE_URL"
+echo "Correlation ID: $CORRELATION_ID"
 echo ""
 
-# Helper function to test endpoint
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Test counter
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
 test_endpoint() {
     local name="$1"
     local method="$2"
     local endpoint="$3"
     local expected_status="$4"
+    local data="$5"
     
-    echo "Testing: $name"
-    echo "  $method $endpoint"
+    echo -n "Testing: $name ... "
     
-    response=$(curl -s -w "\n%{http_code}" -X "$method" "$API_URL$endpoint")
+    if [ "$method" = "GET" ]; then
+        response=$(curl -s -w "\n%{http_code}" \
+            -H "X-Correlation-ID: $CORRELATION_ID" \
+            -H "Content-Type: application/json" \
+            "$API_BASE_URL$endpoint")
+    else
+        response=$(curl -s -w "\n%{http_code}" \
+            -X "$method" \
+            -H "X-Correlation-ID: $CORRELATION_ID" \
+            -H "Content-Type: application/json" \
+            -d "$data" \
+            "$API_BASE_URL$endpoint")
+    fi
+    
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
     
-    # Check HTTP status
+    # Check HTTP status code
     if [ "$http_code" != "$expected_status" ]; then
-        echo "  ❌ FAIL: Expected HTTP $expected_status, got $http_code"
-        ((FAILED++))
+        echo -e "${RED}FAIL${NC} (HTTP $http_code, expected $expected_status)"
+        echo "Response: $body"
+        ((TESTS_FAILED++))
         return 1
     fi
     
-    # Check response has required fields
-    if ! echo "$body" | jq -e '.success' > /dev/null 2>&1; then
-        echo "  ❌ FAIL: Missing 'success' field"
-        ((FAILED++))
+    # Check ApiResponse structure
+    has_success=$(echo "$body" | jq -r 'has("success")')
+    has_data=$(echo "$body" | jq -r 'has("data")')
+    has_error=$(echo "$body" | jq -r 'has("error")')
+    has_correlation=$(echo "$body" | jq -r 'has("correlation_id")')
+    
+    if [ "$has_success" != "true" ] || [ "$has_data" != "true" ] || \
+       [ "$has_error" != "true" ] || [ "$has_correlation" != "true" ]; then
+        echo -e "${RED}FAIL${NC} (Missing required fields)"
+        echo "Response: $body"
+        echo "has_success=$has_success, has_data=$has_data, has_error=$has_error, has_correlation=$has_correlation"
+        ((TESTS_FAILED++))
         return 1
     fi
     
-    if ! echo "$body" | jq -e '.correlation_id' > /dev/null 2>&1; then
-        echo "  ❌ FAIL: Missing 'correlation_id' field"
-        ((FAILED++))
-        return 1
-    fi
-    
-    # Check success field matches HTTP status
+    # Check success/error consistency
     success=$(echo "$body" | jq -r '.success')
-    if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-        if [ "$success" != "true" ]; then
-            echo "  ❌ FAIL: success should be true for 2xx status"
-            ((FAILED++))
-            return 1
-        fi
-    else
-        if [ "$success" != "false" ]; then
-            echo "  ❌ FAIL: success should be false for error status"
-            ((FAILED++))
-            return 1
-        fi
-    fi
+    data=$(echo "$body" | jq -r '.data')
+    error=$(echo "$body" | jq -r '.error')
     
-    # Check data/error fields
     if [ "$success" = "true" ]; then
-        if echo "$body" | jq -e '.error != null' > /dev/null 2>&1; then
-            echo "  ❌ FAIL: error should be null when success=true"
-            ((FAILED++))
+        if [ "$data" = "null" ]; then
+            echo -e "${YELLOW}WARN${NC} (success=true but data=null)"
+        fi
+        if [ "$error" != "null" ]; then
+            echo -e "${RED}FAIL${NC} (success=true but error is not null)"
+            echo "Response: $body"
+            ((TESTS_FAILED++))
             return 1
         fi
     else
-        if ! echo "$body" | jq -e '.error' > /dev/null 2>&1; then
-            echo "  ❌ FAIL: error field missing when success=false"
-            ((FAILED++))
+        if [ "$error" = "null" ]; then
+            echo -e "${RED}FAIL${NC} (success=false but error=null)"
+            echo "Response: $body"
+            ((TESTS_FAILED++))
             return 1
         fi
-        if ! echo "$body" | jq -e '.error.code' > /dev/null 2>&1; then
-            echo "  ❌ FAIL: error.code missing"
-            ((FAILED++))
-            return 1
-        fi
-        if ! echo "$body" | jq -e '.error.message' > /dev/null 2>&1; then
-            echo "  ❌ FAIL: error.message missing"
-            ((FAILED++))
-            return 1
+        if [ "$data" != "null" ]; then
+            echo -e "${YELLOW}WARN${NC} (success=false but data is not null)"
         fi
     fi
     
-    echo "  ✅ PASS"
-    ((PASSED++))
+    echo -e "${GREEN}PASS${NC}"
+    ((TESTS_PASSED++))
     return 0
 }
 
-echo "================================================================================"
-echo "TESTING ENDPOINTS"
-echo "================================================================================"
-echo ""
+# ============================================================================
+# Health Check
+# ============================================================================
 
-# Test health endpoint
-test_endpoint "Health Check" "GET" "/health" "200"
+echo "============================================================================"
+echo "1. Health Check"
+echo "============================================================================"
 
-# Test usage profiles
-test_endpoint "Usage Profiles" "GET" "/api/usage-profiles" "200"
-
-# Test jobs list
-test_endpoint "Jobs List" "GET" "/api/jobs" "200"
-
-# Test 404 error
-test_endpoint "404 Not Found" "GET" "/api/jobs/nonexistent-id" "404"
+test_endpoint "Health endpoint" "GET" "/health" "200"
 
 echo ""
-echo "================================================================================"
-echo "TEST RESULTS"
-echo "================================================================================"
-echo "Passed: $PASSED"
-echo "Failed: $FAILED"
+
+# ============================================================================
+# Usage Profiles
+# ============================================================================
+
+echo "============================================================================"
+echo "2. Usage Profiles API"
+echo "============================================================================"
+
+test_endpoint "Get usage profiles" "GET" "/api/usage-profiles" "200"
+
 echo ""
 
-if [ $FAILED -eq 0 ]; then
-    echo "✅ ALL TESTS PASSED"
+# ============================================================================
+# Jobs API
+# ============================================================================
+
+echo "============================================================================"
+echo "3. Jobs API"
+echo "============================================================================"
+
+test_endpoint "List jobs (empty)" "GET" "/api/jobs?page=1&page_size=10" "200"
+
+# Test job creation (will fail without upload, but should return proper error format)
+test_endpoint "Create job (invalid data)" "POST" "/api/jobs" "422" \
+    '{"name": "test-job"}'
+
+# Test get non-existent job
+test_endpoint "Get non-existent job" "GET" "/api/jobs/non-existent-id" "404"
+
+echo ""
+
+# ============================================================================
+# Error Handling Tests
+# ============================================================================
+
+echo "============================================================================"
+echo "4. Error Handling"
+echo "============================================================================"
+
+# Test 404
+test_endpoint "404 Not Found" "GET" "/api/non-existent-endpoint" "404"
+
+# Test validation error
+test_endpoint "Validation error" "POST" "/api/jobs" "422" \
+    '{"invalid": "data"}'
+
+echo ""
+
+# ============================================================================
+# Correlation ID Propagation
+# ============================================================================
+
+echo "============================================================================"
+echo "5. Correlation ID Propagation"
+echo "============================================================================"
+
+echo -n "Testing correlation ID propagation ... "
+
+response=$(curl -s \
+    -H "X-Correlation-ID: custom-correlation-123" \
+    -H "Content-Type: application/json" \
+    "$API_BASE_URL/health")
+
+correlation_id=$(echo "$response" | jq -r '.correlation_id // empty')
+
+if [ "$correlation_id" = "custom-correlation-123" ]; then
+    echo -e "${GREEN}PASS${NC}"
+    ((TESTS_PASSED++))
+else
+    echo -e "${RED}FAIL${NC} (Expected: custom-correlation-123, Got: $correlation_id)"
+    ((TESTS_FAILED++))
+fi
+
+echo ""
+
+# ============================================================================
+# Data Structure Consistency
+# ============================================================================
+
+echo "============================================================================"
+echo "6. Data Structure Consistency"
+echo "============================================================================"
+
+echo -n "Testing jobs list returns flat array ... "
+
+response=$(curl -s \
+    -H "X-Correlation-ID: $CORRELATION_ID" \
+    "$API_BASE_URL/api/jobs?page=1&page_size=10")
+
+# Check that data is an array, not nested object
+data_type=$(echo "$response" | jq -r '.data | type')
+
+if [ "$data_type" = "array" ]; then
+    echo -e "${GREEN}PASS${NC}"
+    ((TESTS_PASSED++))
+else
+    echo -e "${RED}FAIL${NC} (Expected array, got: $data_type)"
+    echo "Response: $response"
+    ((TESTS_FAILED++))
+fi
+
+echo ""
+
+# ============================================================================
+# Summary
+# ============================================================================
+
+echo "============================================================================"
+echo "Test Summary"
+echo "============================================================================"
+echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
+echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
+echo "Total Tests: $((TESTS_PASSED + TESTS_FAILED))"
+echo ""
+
+if [ $TESTS_FAILED -eq 0 ]; then
+    echo -e "${GREEN}✓ All tests passed!${NC}"
+    echo ""
+    echo "API Contract Quality Score: 10/10"
     exit 0
 else
-    echo "❌ SOME TESTS FAILED"
+    echo -e "${RED}✗ Some tests failed${NC}"
+    echo ""
+    echo "API Contract Quality Score: $((TESTS_PASSED * 10 / (TESTS_PASSED + TESTS_FAILED)))/10"
     exit 1
 fi

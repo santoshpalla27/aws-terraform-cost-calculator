@@ -30,7 +30,7 @@ async def create_job(
     
     return {
         "success": True,
-        "data": {"job": job, "message": "Job created successfully"},
+        "data": job,
         "error": None,
         "correlation_id": correlation_id
     }
@@ -48,7 +48,7 @@ async def get_job(
     
     return {
         "success": True,
-        "data": {"job": job, "message": "Job retrieved successfully"},
+        "data": job,
         "error": None,
         "correlation_id": correlation_id
     }
