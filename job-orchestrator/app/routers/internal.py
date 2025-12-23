@@ -21,7 +21,8 @@ async def start_job(
 ):
     """
     Start job execution.
-    Transitions from UPLOADED to PLANNING.
+    Accepts jobs in PENDING state (from API Gateway) or UPLOADED state.
+    Transitions to PLANNING.
     """
     set_job_id(job_id)
     
@@ -34,10 +35,20 @@ async def start_job(
             detail=f"Job {job_id} not found"
         )
     
-    if job.current_state != JobState.UPLOADED:
+    # Accept both PENDING (from API Gateway) and UPLOADED states
+    # PENDING is the initial state when job is created by API Gateway
+    # We treat PENDING as equivalent to UPLOADED for orchestration purposes
+    valid_states = [JobState.UPLOADED]
+    
+    # Check if job is in a state name that matches "PENDING" (from API Gateway)
+    # The job might have been created with a different state enum
+    if job.current_state.value == "PENDING":
+        # Treat PENDING as UPLOADED - this is the initial state from API Gateway
+        logger.info(f"Job {job_id} in PENDING state, treating as UPLOADED")
+    elif job.current_state not in valid_states:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Job must be in UPLOADED state, currently {job.current_state}"
+            detail=f"Job must be in PENDING or UPLOADED state, currently {job.current_state}"
         )
     
     # Transition to PLANNING
