@@ -9,8 +9,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (use npm install if package-lock.json doesn't exist)
-RUN if [ -f package-lock.json ]; then npm ci --only=production; else npm install --only=production; fi
+# Install ALL dependencies (including devDependencies needed for build)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # ============================================================================
 # Stage 2: Builder
