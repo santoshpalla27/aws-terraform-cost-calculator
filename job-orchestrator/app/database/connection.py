@@ -4,6 +4,7 @@ PostgreSQL database connection.
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import text
 from app.config import settings
 from app.utils.logger import get_logger
 
@@ -56,7 +57,7 @@ async def init_db() -> None:
             # Split by semicolon and execute each statement
             for statement in sql.split(';'):
                 if statement.strip():
-                    await conn.execute(statement)
+                    await conn.execute(text(statement))
     
     logger.info("Database initialized successfully")
 
