@@ -5,7 +5,7 @@ FastAPI application for Terraform Cost Calculator platform.
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, HTTPException
 from app.config import settings
 from app.middleware.correlation import CorrelationIDMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
@@ -87,6 +87,29 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
                 "details": sanitized_errors
+            },
+            "correlation_id": correlation_id
+        }
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions."""
+    correlation_id = get_correlation_id()
+    logger.warning(
+        f"HTTP exception: {exc.status_code} - {exc.detail}",
+        extra={"correlation_id": correlation_id, "status_code": exc.status_code}
+    )
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "data": None,
+            "error": {
+                "code": f"HTTP_{exc.status_code}",
+                "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail)
             },
             "correlation_id": correlation_id
         }
