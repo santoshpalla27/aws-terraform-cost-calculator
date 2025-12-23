@@ -54,10 +54,8 @@ async def init_db() -> None:
         # Read and execute migration SQL
         with open("app/database/migrations/001_initial.sql", "r") as f:
             sql = f.read()
-            # Split by semicolon and execute each statement
-            for statement in sql.split(';'):
-                if statement.strip():
-                    await conn.execute(text(statement))
+            # Execute the entire SQL file at once to preserve function definitions
+            await conn.execute(text(sql))
     
     logger.info("Database initialized successfully")
 
