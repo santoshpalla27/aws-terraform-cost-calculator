@@ -18,11 +18,11 @@ async def get_usage_profiles(request: Request, user_id: str = get_current_user):
     """
     Get available usage profiles.
     
-    Proxies request to usage-modeling-engine.
+    Proxies request to usage-modeling-engine and transforms response
+    to match frontend ApiResponse contract.
     
     Returns:
-        profiles: List of available usage profiles with metadata
-        default: Default profile name
+        ApiResponse with profiles array
         
     Raises:
         HTTPException: 502 for downstream errors, 503 for service unavailable
@@ -59,15 +59,34 @@ async def get_usage_profiles(request: Request, user_id: str = get_current_user):
                     detail=response.json().get("detail", "Bad request")
                 )
             
-            # Proxy response as-is
-            data = response.json()
+            # Get raw response from usage engine
+            raw_data = response.json()
+            profiles_list = raw_data.get('profiles', [])
+            default_profile = raw_data.get('default', '')
+            
+            # Transform to frontend format
+            # Frontend expects: ApiResponse<UsageProfile[]>
+            # where UsageProfile has: id, name, description, isDefault, assumptions
+            transformed_profiles = []
+            for profile in profiles_list:
+                transformed_profiles.append({
+                    "id": profile.get("name", ""),  # Use name as id
+                    "name": profile.get("name", ""),
+                    "description": profile.get("description", ""),
+                    "isDefault": profile.get("name") == default_profile,
+                    "assumptions": {}  # Empty for now, can be populated if needed
+                })
             
             logger.info(
-                f"Retrieved {len(data.get('profiles', []))} usage profiles, "
-                f"default={data.get('default')}, correlation_id={correlation_id}"
+                f"Retrieved {len(transformed_profiles)} usage profiles, "
+                f"default={default_profile}, correlation_id={correlation_id}"
             )
             
-            return data
+            # Return in ApiResponse format
+            return {
+                "success": True,
+                "data": transformed_profiles
+            }
             
     except httpx.TimeoutException:
         logger.error(f"Usage engine timeout, correlation_id={correlation_id}")
