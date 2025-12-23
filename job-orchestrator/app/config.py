@@ -10,10 +10,10 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/orchestrator"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@postgres:5432/orchestrator"
     
     # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = "redis://redis:6379/0"
     
     # Stage Timeouts (seconds)
     planning_timeout: int = 300

@@ -8,6 +8,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings (minimal)."""
     
+    # Environment
+    environment: str = "production"
+    
     # Server
     host: str = "0.0.0.0"
     port: int = 8003
