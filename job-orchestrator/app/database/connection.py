@@ -51,11 +51,33 @@ async def init_db() -> None:
     # In production, use Alembic for migrations
     # For now, we'll execute the SQL file directly
     async with engine.begin() as conn:
-        # Read and execute migration SQL
+        # Read migration SQL
         with open("app/database/migrations/001_initial.sql", "r") as f:
             sql = f.read()
-            # Execute the entire SQL file at once to preserve function definitions
-            await conn.execute(text(sql))
+        
+        # Smart split: handle dollar-quoted strings in PostgreSQL functions
+        statements = []
+        current_statement = []
+        in_dollar_quote = False
+        
+        for line in sql.split('\n'):
+            # Check for dollar-quote delimiters
+            if '$$' in line:
+                in_dollar_quote = not in_dollar_quote
+            
+            current_statement.append(line)
+            
+            # If we hit a semicolon outside of dollar quotes, it's a statement boundary
+            if ';' in line and not in_dollar_quote:
+                stmt = '\n'.join(current_statement).strip()
+                if stmt and not stmt.startswith('--'):
+                    statements.append(stmt)
+                current_statement = []
+        
+        # Execute each statement
+        for statement in statements:
+            if statement.strip():
+                await conn.execute(text(statement))
     
     logger.info("Database initialized successfully")
 
