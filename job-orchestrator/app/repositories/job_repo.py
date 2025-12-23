@@ -3,7 +3,7 @@ Job repository for PostgreSQL persistence.
 """
 from typing import Optional, List
 from datetime import datetime
-from sqlalchemy import select, update, and_
+from sqlalchemy import select, update, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.job import Job
 from app.models.stage import StageExecution, StageStatus
@@ -30,7 +30,7 @@ class JobRepository:
             Created job
         """
         # Execute raw SQL insert
-        query = """
+        query = text("""
             INSERT INTO jobs (
                 job_id, upload_id, user_id, name, current_state,
                 created_at, updated_at, metadata
@@ -38,7 +38,7 @@ class JobRepository:
                 :job_id, :upload_id, :user_id, :name, :current_state,
                 :created_at, :updated_at, :metadata::jsonb
             )
-        """
+        """)
         
         await self.session.execute(
             query,
@@ -68,7 +68,7 @@ class JobRepository:
         Returns:
             Job or None if not found
         """
-        query = "SELECT * FROM jobs WHERE job_id = :job_id"
+        query = text("SELECT * FROM jobs WHERE job_id = :job_id")
         result = await self.session.execute(query, {"job_id": job_id})
         row = result.fetchone()
         
@@ -129,7 +129,7 @@ class JobRepository:
             updates["error_message"] = error_message
         
         # Execute update
-        query = """
+        query_str = """
             UPDATE jobs SET
                 current_state = :current_state,
                 previous_state = :previous_state,
@@ -137,16 +137,16 @@ class JobRepository:
         """
         
         if "started_at" in updates:
-            query += ", started_at = :started_at"
+            query_str += ", started_at = :started_at"
         if "completed_at" in updates:
-            query += ", completed_at = :completed_at"
+            query_str += ", completed_at = :completed_at"
         if "error_message" in updates:
-            query += ", error_message = :error_message"
+            query_str += ", error_message = :error_message"
         
-        query += " WHERE job_id = :job_id"
+        query_str += " WHERE job_id = :job_id"
         updates["job_id"] = job_id
         
-        await self.session.execute(query, updates)
+        await self.session.execute(text(query_str), updates)
         await self.session.commit()
         
         logger.info(
@@ -156,12 +156,12 @@ class JobRepository:
     
     async def increment_retry_count(self, job_id: str) -> None:
         """Increment retry count for a job."""
-        query = """
+        query = text("""
             UPDATE jobs SET
                 retry_count = retry_count + 1,
                 updated_at = :updated_at
             WHERE job_id = :job_id
-        """
+        """)
         
         await self.session.execute(
             query,
@@ -171,12 +171,12 @@ class JobRepository:
     
     async def set_plan_reference(self, job_id: str, plan_reference: str) -> None:
         """Set plan reference for a job."""
-        query = """
+        query = text("""
             UPDATE jobs SET
                 plan_reference = :plan_reference,
                 updated_at = :updated_at
             WHERE job_id = :job_id
-        """
+        """)
         
         await self.session.execute(
             query,
@@ -190,12 +190,12 @@ class JobRepository:
     
     async def set_result_reference(self, job_id: str, result_reference: str) -> None:
         """Set result reference for a job."""
-        query = """
+        query = text("""
             UPDATE jobs SET
                 result_reference = :result_reference,
                 updated_at = :updated_at
             WHERE job_id = :job_id
-        """
+        """)
         
         await self.session.execute(
             query,
@@ -209,7 +209,7 @@ class JobRepository:
     
     async def create_stage_execution(self, execution: StageExecution) -> StageExecution:
         """Create a stage execution record."""
-        query = """
+        query = text("""
             INSERT INTO stage_executions (
                 job_id, stage_name, attempt_number, started_at,
                 status, input_data, output_data
@@ -218,7 +218,7 @@ class JobRepository:
                 :status, :input_data::jsonb, :output_data::jsonb
             )
             RETURNING id
-        """
+        """)
         
         result = await self.session.execute(
             query,
@@ -260,21 +260,21 @@ class JobRepository:
         if output_data:
             updates["output_data"] = output_data
         
-        query = """
+        query_str = """
             UPDATE stage_executions SET
                 status = :status,
                 completed_at = :completed_at
         """
         
         if "duration_ms" in updates:
-            query += ", duration_ms = :duration_ms"
+            query_str += ", duration_ms = :duration_ms"
         if "error_message" in updates:
-            query += ", error_message = :error_message"
+            query_str += ", error_message = :error_message"
         if "output_data" in updates:
-            query += ", output_data = :output_data::jsonb"
+            query_str += ", output_data = :output_data::jsonb"
         
-        query += " WHERE id = :id"
+        query_str += " WHERE id = :id"
         updates["id"] = execution_id
         
-        await self.session.execute(query, updates)
+        await self.session.execute(text(query_str), updates)
         await self.session.commit()
