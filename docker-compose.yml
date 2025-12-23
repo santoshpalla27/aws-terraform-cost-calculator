@@ -130,7 +130,7 @@ services:
     networks:
       - cost-platform
     ports:
-      - "8080:8080"
+      - "8080:8000"
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
