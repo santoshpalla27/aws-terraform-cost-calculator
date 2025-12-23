@@ -81,16 +81,14 @@ async def list_jobs(
     
     total_pages = math.ceil(total / page_size) if total > 0 else 0
     
-    # Return in standard ApiResponse format
+    # Return in standard ApiResponse format with flattened pagination
     return {
         "success": True,
-        "data": {
-            "data": jobs,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": total_pages
-        },
+        "data": jobs,  # Direct array, not nested
+        "total": total,
+        "page": page,
+        "pageSize": page_size,  # Use camelCase for frontend
+        "totalPages": total_pages,
         "error": None,
         "correlation_id": correlation_id
     }
