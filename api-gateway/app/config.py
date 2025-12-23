@@ -3,8 +3,8 @@ Configuration management for API Gateway.
 All configuration loaded from environment variables.
 """
 from pydantic_settings import BaseSettings
-from pydantic import Field
-from typing import List
+from pydantic import Field, field_validator
+from typing import List, Union
 
 
 class Settings(BaseSettings):
@@ -40,11 +40,17 @@ class Settings(BaseSettings):
     # CORS
     # CRITICAL: Cannot use wildcard (*) with credentials=true
     # Must use explicit origin from environment variable
-    cors_origins: List[str] = Field(
-        default=["http://localhost:3000"],
-        env="CORS_ORIGINS"
-    )
+    cors_origins: Union[List[str], str] = "http://localhost:3000"
     cors_allow_credentials: bool = True
+    
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from comma-separated string or list."""
+        if isinstance(v, str):
+            # Split by comma and strip whitespace
+            return [origin.strip() for origin in v.split(',')]
+        return v
     
     # Logging
     log_level: str = "INFO"
