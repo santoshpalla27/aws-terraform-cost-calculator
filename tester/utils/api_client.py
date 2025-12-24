@@ -175,7 +175,7 @@ class PlatformClient:
         
         # Prepare multipart upload
         files = {
-            'file': ('terraform.zip', zip_data, 'application/zip')
+            'files': ('terraform.zip', zip_data, 'application/zip')
         }
         
         url = f"{self.base_url}/uploads"

@@ -61,7 +61,7 @@ def test_valid_terraform_upload(api_client, track_correlation):
     # Upload
     import requests
     files = {
-        'file': ('terraform.zip', zip_data, 'application/zip')
+        'files': ('terraform.zip', zip_data, 'application/zip')
     }
     
     upload_url = f"{api_client.base_url}/uploads"
@@ -120,7 +120,7 @@ def test_upload_persistence(api_client):
     zip_data = create_terraform_zip(fixture_dir)
     
     import requests
-    files = {'file': ('terraform.zip', zip_data, 'application/zip')}
+    files = {'files': ('terraform.zip', zip_data, 'application/zip')}
     upload_response = requests.post(f"{api_client.base_url}/uploads", files=files)
     
     assert upload_response.status_code in [200, 201], "FAILED: Upload failed"
@@ -162,7 +162,7 @@ def test_invalid_file_upload_rejected(api_client):
     # Try to upload a text file instead of ZIP
     import requests
     files = {
-        'file': ('invalid.txt', b'This is not a valid Terraform file', 'text/plain')
+        'files': ('invalid.txt', b'This is not a valid Terraform file', 'text/plain')
     }
     
     response = requests.post(f"{api_client.base_url}/uploads", files=files)
@@ -204,7 +204,7 @@ def test_empty_file_upload_rejected(api_client):
     
     import requests
     files = {
-        'file': ('empty.zip', b'', 'application/zip')
+        'files': ('empty.zip', b'', 'application/zip')
     }
     
     response = requests.post(f"{api_client.base_url}/uploads", files=files)
@@ -245,7 +245,7 @@ def test_malformed_zip_rejected(api_client):
     malformed_zip = b'PK\x03\x04' + b'\x00' * 100  # Looks like ZIP header but is invalid
     
     files = {
-        'file': ('malformed.zip', malformed_zip, 'application/zip')
+        'files': ('malformed.zip', malformed_zip, 'application/zip')
     }
     
     response = requests.post(f"{api_client.base_url}/uploads", files=files)

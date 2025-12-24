@@ -532,3 +532,5 @@ services:
     restart: "no"
     profiles:
       - test
+
+# docker compose --profile test up --build platform-tester
