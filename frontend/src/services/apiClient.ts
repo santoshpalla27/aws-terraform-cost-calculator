@@ -10,7 +10,9 @@ class ApiClient {
     private baseURL: string;
 
     constructor() {
-        this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        // Base URL should include /api prefix
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        this.baseURL = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
 
         this.client = axios.create({
             baseURL: this.baseURL,
