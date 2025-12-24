@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { api } from './client';
 import { Job, CostResult, JobStatus } from './types';
 
 /**
@@ -15,30 +15,18 @@ export const jobsApi = {
         upload_id: string;
         usage_profile?: string;
     }): Promise<Job> {
-        const response = await apiClient.post<Job>('/api/jobs', {
+        return await api.post<Job>('/jobs', {
             name: params.name,
             upload_id: params.upload_id,
             usage_profile: params.usage_profile || 'prod'
         });
-
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to create job');
-        }
-
-        return response.data;
     },
 
     /**
      * Get job details by ID
      */
     async get(jobId: string): Promise<Job> {
-        const response = await apiClient.get<Job>(`/api/jobs/${jobId}`);
-
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to fetch job');
-        }
-
-        return response.data;
+        return await api.get<Job>(`/jobs/${jobId}`);
     },
 
     /**
@@ -49,15 +37,10 @@ export const jobsApi = {
         page?: number;
         page_size?: number;
     }): Promise<{ jobs: Job[]; pagination: any }> {
-        const response = await apiClient.get<Job[]>('/api/jobs', params);
-
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to list jobs');
-        }
-
+        const jobs = await api.get<Job[]>('/jobs', params);
         return {
-            jobs: response.data,
-            pagination: response.meta.pagination || null
+            jobs,
+            pagination: null // TODO: Extract from response
         };
     },
 
@@ -70,32 +53,20 @@ export const jobsApi = {
         progress: number;
         updated_at: string;
     }> {
-        const response = await apiClient.get<any>(`/api/jobs/${jobId}/status`);
-
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to fetch job status');
-        }
-
-        return response.data;
+        return await api.get<any>(`/jobs/${jobId}/status`);
     },
 
     /**
      * Get cost estimation results for completed job
      */
     async getResults(jobId: string): Promise<CostResult> {
-        const response = await apiClient.get<CostResult>(`/api/jobs/${jobId}/results`);
-
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to fetch results');
-        }
-
-        return response.data;
+        return await api.get<CostResult>(`/jobs/${jobId}/results`);
     },
 
     /**
      * Delete a job
      */
     async delete(jobId: string): Promise<void> {
-        await apiClient.delete(`/api/jobs/${jobId}`);
+        await api.delete(`/jobs/${jobId}`);
     }
 };
