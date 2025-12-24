@@ -6,19 +6,54 @@ import { cn } from '@/utils/formatters';
 import type { Job } from '@/types/job';
 
 const STATUS_CONFIG = {
-    PENDING: {
+    IDLE: {
         icon: Clock,
-        color: 'text-yellow-600',
-        bg: 'bg-yellow-100',
-        label: 'Pending',
-        description: 'Waiting to start...',
+        color: 'text-gray-600',
+        bg: 'bg-gray-100',
+        label: 'Idle',
+        description: 'Job created, waiting to start...',
     },
-    RUNNING: {
+    UPLOADING: {
         icon: Loader2,
         color: 'text-blue-600',
         bg: 'bg-blue-100',
-        label: 'Running',
-        description: 'Processing your Terraform files...',
+        label: 'Uploading',
+        description: 'Uploading Terraform files...',
+    },
+    CREATED: {
+        icon: Clock,
+        color: 'text-yellow-600',
+        bg: 'bg-yellow-100',
+        label: 'Created',
+        description: 'Job created, queued for processing...',
+    },
+    PLANNING: {
+        icon: Loader2,
+        color: 'text-blue-600',
+        bg: 'bg-blue-100',
+        label: 'Planning',
+        description: 'Running terraform plan...',
+    },
+    PARSING: {
+        icon: Loader2,
+        color: 'text-blue-600',
+        bg: 'bg-blue-100',
+        label: 'Parsing',
+        description: 'Parsing Terraform plan output...',
+    },
+    ENRICHING: {
+        icon: Loader2,
+        color: 'text-blue-600',
+        bg: 'bg-blue-100',
+        label: 'Enriching',
+        description: 'Enriching with AWS metadata...',
+    },
+    COSTING: {
+        icon: Loader2,
+        color: 'text-blue-600',
+        bg: 'bg-blue-100',
+        label: 'Costing',
+        description: 'Calculating costs...',
     },
     COMPLETED: {
         icon: CheckCircle,
@@ -55,7 +90,7 @@ export function JobStatus({ job, onRetry }: JobStatusProps) {
                             className={cn(
                                 'h-8 w-8',
                                 config.color,
-                                job.status === 'RUNNING' && 'animate-spin'
+                                ['UPLOADING', 'PLANNING', 'PARSING', 'ENRICHING', 'COSTING'].includes(job.status) && 'animate-spin'
                             )}
                         />
                     </div>
@@ -69,7 +104,7 @@ export function JobStatus({ job, onRetry }: JobStatusProps) {
                 </div>
 
                 {/* Progress Bar */}
-                {job.progress !== undefined && job.status === 'RUNNING' && (
+                {job.progress !== undefined && ['UPLOADING', 'PLANNING', 'PARSING', 'ENRICHING', 'COSTING'].includes(job.status) && (
                     <div className="mt-4">
                         <div className="flex justify-between text-sm text-gray-600 mb-2">
                             <span>Progress</span>
