@@ -95,14 +95,18 @@ def test_job_survives_orchestrator_restart(api_client, track_correlation):
     print("   ✓ Job orchestrator restarted and healthy")
     
     # ========================================================================
-    # STEP 4: Poll until terminal state
+    # STEP 4: Poll until terminal - GUARANTEE terminal outcome
     # ========================================================================
     print("\n[4/5] Polling job to terminal state...")
+    print("   GUARANTEE: Job MUST reach terminal state (COMPLETED or FAILED)")
+    print("   FORBIDDEN: Stuck states, progress regression, silent hangs")
     
     poll_count = 0
+    previous_progress = 0
+    last_state = None
     
     def check_status():
-        nonlocal poll_count
+        nonlocal poll_count, previous_progress, last_state
         poll_count += 1
         
         status_response = api_client.get(f'/jobs/{job_id}/status')
@@ -110,8 +114,18 @@ def test_job_survives_orchestrator_restart(api_client, track_correlation):
         
         status_data = status_response['data']
         current_state = status_data['status']
+        current_progress = status_data.get('progress', 0)
         
-        print(f"   Poll {poll_count}: {current_state} ({status_data.get('progress', 0)}%)")
+        # ENFORCE: No progress regression
+        if current_state not in ['FAILED']:
+            assert current_progress >= previous_progress, \
+                f"GUARANTEE VIOLATION: Progress regressed after restart. " \
+                f"Was: {previous_progress}%, Now: {current_progress}%"
+        
+        previous_progress = current_progress
+        last_state = current_state
+        
+        print(f"   Poll {poll_count}: {current_state} ({current_progress}%)")
         
         return status_data
     
@@ -127,28 +141,48 @@ def test_job_survives_orchestrator_restart(api_client, track_correlation):
             timeout=300
         )
     except TimeoutError:
-        pytest.fail("FAILED: Job stuck after orchestrator restart - did not reach terminal state")
+        pytest.fail(
+            f"GUARANTEE VIOLATION: Job stuck after orchestrator restart. "
+            f"Last state: {last_state}. This violates the terminal outcome guarantee."
+        )
     
     # ========================================================================
-    # STEP 5: Validate terminal state reached
+    # STEP 5: Validate terminal outcome guarantee
     # ========================================================================
-    print("\n[5/5] Validating recovery...")
+    print("\n[5/5] Validating terminal outcome guarantee...")
     
     final_state = final_status['status']
     assert_terminal_state(final_state)
     
+    # GUARANTEE: Terminal state reached
+    print(f"   ✓ Terminal state reached: {final_state}")
+    
+    # GUARANTEE: If FAILED, error must be present
     if final_state == 'FAILED':
-        error_msg = final_status.get('error_message', 'Unknown error')
-        print(f"   ⚠ Job failed after restart: {error_msg}")
-        print(f"   ✓ Failure is visible and terminal (acceptable)")
+        error_msg = final_status.get('error_message')
+        assert error_msg is not None and error_msg != '', \
+            "GUARANTEE VIOLATION: Job FAILED but error_message is missing"
+        
+        print(f"   ✓ Job failed with visible error: {error_msg}")
+        print(f"   ✓ Failure is terminal and traceable (acceptable outcome)")
     else:
         print(f"   ✓ Job completed successfully after restart")
     
+    # GUARANTEE: Progress is valid
+    final_progress = final_status.get('progress', 0)
+    if final_state == 'COMPLETED':
+        assert final_progress == 100, \
+            f"GUARANTEE VIOLATION: COMPLETED but progress is {final_progress}%, not 100%"
+    
+    print(f"   ✓ Progress valid: {final_progress}%")
+    
     print("\n" + "="*80)
-    print("✅ RESILIENCE TEST PASSED - Platform survived orchestrator restart")
+    print("✅ RESILIENCE GUARANTEE MET - Platform survived orchestrator restart")
     print("="*80)
     print(f"Final State: {final_state}")
+    print(f"Final Progress: {final_progress}%")
     print(f"Polls Required: {poll_count}")
+    print(f"Outcome: {'GRACEFUL FAILURE' if final_state == 'FAILED' else 'SUCCESSFUL RECOVERY'}")
     print("="*80 + "\n")
 
 
@@ -233,14 +267,18 @@ def test_job_survives_pricing_engine_restart(api_client, track_correlation):
     print("   ✓ Pricing engine restarted")
     
     # ========================================================================
-    # STEP 4: Poll until terminal state
+    # STEP 4: Poll until terminal - GUARANTEE terminal outcome
     # ========================================================================
     print("\n[4/5] Polling job to terminal state...")
+    print("   GUARANTEE: Job MUST reach terminal state (COMPLETED or FAILED)")
+    print("   FORBIDDEN: Stuck states, progress regression, silent hangs")
     
     poll_count = 0
+    previous_progress = 0
+    last_state = None
     
     def check_status():
-        nonlocal poll_count
+        nonlocal poll_count, previous_progress, last_state
         poll_count += 1
         
         status_response = api_client.get(f'/jobs/{job_id}/status')
@@ -248,8 +286,18 @@ def test_job_survives_pricing_engine_restart(api_client, track_correlation):
         
         status_data = status_response['data']
         current_state = status_data['status']
+        current_progress = status_data.get('progress', 0)
         
-        print(f"   Poll {poll_count}: {current_state} ({status_data.get('progress', 0)}%)")
+        # ENFORCE: No progress regression
+        if current_state not in ['FAILED']:
+            assert current_progress >= previous_progress, \
+                f"GUARANTEE VIOLATION: Progress regressed after restart. " \
+                f"Was: {previous_progress}%, Now: {current_progress}%"
+        
+        previous_progress = current_progress
+        last_state = current_state
+        
+        print(f"   Poll {poll_count}: {current_state} ({current_progress}%)")
         
         return status_data
     
@@ -265,26 +313,46 @@ def test_job_survives_pricing_engine_restart(api_client, track_correlation):
             timeout=300
         )
     except TimeoutError:
-        pytest.fail("FAILED: Job stuck after pricing engine restart - did not reach terminal state")
+        pytest.fail(
+            f"GUARANTEE VIOLATION: Job stuck after pricing engine restart. "
+            f"Last state: {last_state}. This violates the terminal outcome guarantee."
+        )
     
     # ========================================================================
-    # STEP 5: Validate terminal state reached
+    # STEP 5: Validate terminal outcome guarantee
     # ========================================================================
-    print("\n[5/5] Validating recovery...")
+    print("\n[5/5] Validating terminal outcome guarantee...")
     
     final_state = final_status['status']
     assert_terminal_state(final_state)
     
+    # GUARANTEE: Terminal state reached
+    print(f"   ✓ Terminal state reached: {final_state}")
+    
+    # GUARANTEE: If FAILED, error must be present
     if final_state == 'FAILED':
-        error_msg = final_status.get('error_message', 'Unknown error')
-        print(f"   ⚠ Job failed after restart: {error_msg}")
-        print(f"   ✓ Failure is visible and terminal (acceptable)")
+        error_msg = final_status.get('error_message')
+        assert error_msg is not None and error_msg != '', \
+            "GUARANTEE VIOLATION: Job FAILED but error_message is missing"
+        
+        print(f"   ✓ Job failed with visible error: {error_msg}")
+        print(f"   ✓ Failure is terminal and traceable (acceptable outcome)")
     else:
         print(f"   ✓ Job completed successfully after restart")
     
+    # GUARANTEE: Progress is valid
+    final_progress = final_status.get('progress', 0)
+    if final_state == 'COMPLETED':
+        assert final_progress == 100, \
+            f"GUARANTEE VIOLATION: COMPLETED but progress is {final_progress}%, not 100%"
+    
+    print(f"   ✓ Progress valid: {final_progress}%")
+    
     print("\n" + "="*80)
-    print("✅ RESILIENCE TEST PASSED - Platform survived pricing engine restart")
+    print("✅ RESILIENCE GUARANTEE MET - Platform survived pricing engine restart")
     print("="*80)
     print(f"Final State: {final_state}")
+    print(f"Final Progress: {final_progress}%")
     print(f"Polls Required: {poll_count}")
+    print(f"Outcome: {'GRACEFUL FAILURE' if final_state == 'FAILED' else 'SUCCESSFUL RECOVERY'}")
     print("="*80 + "\n")
