@@ -31,7 +31,7 @@ class ResultRepository:
     """
     
     def __init__(self):
-        self.session = get_db_session()
+        self.session = next(get_db())
     
     async def create(self, result: CostResult) -> CostResult:
         """
