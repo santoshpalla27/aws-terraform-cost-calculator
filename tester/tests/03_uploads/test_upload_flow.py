@@ -123,13 +123,17 @@ def test_upload_persistence(api_client):
     upload_id = upload_response.json()['upload']['upload_id']
     print(f"   Upload created: {upload_id}")
     
-    # Retrieve upload
-    get_response = api_client.get(f'/uploads/{upload_id}')
+    # Retrieve upload (using raw requests since upload API uses custom format)
+    import requests
+    get_response = requests.get(f"{api_client.base_url}/uploads/{upload_id}")
     
-    assert get_response['success'], \
-        f"FAILED: Could not retrieve upload {upload_id}. Error: {get_response.get('error')}"
+    assert get_response.status_code == 200, \
+        f"FAILED: Could not retrieve upload {upload_id}. Status: {get_response.status_code}"
     
-    upload_data = get_response['data']
+    data = get_response.json()
+    assert 'upload' in data, "FAILED: Response missing 'upload' field"
+    
+    upload_data = data['upload']
     
     # Validate upload data
     assert 'upload_id' in upload_data, "FAILED: Retrieved upload missing 'upload_id'"
