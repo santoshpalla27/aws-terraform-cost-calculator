@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { api } from './client';
 import { UsageProfile } from './types';
 
 /**
@@ -7,31 +7,23 @@ import { UsageProfile } from './types';
  */
 export const usageProfilesApi = {
     /**
-     * Get all available usage profiles
+     * Get all usage profiles
      */
     async list(): Promise<UsageProfile[]> {
-        const response = await apiClient.get<UsageProfile[]>('/api/usage-profiles');
+        return await api.get<UsageProfile[]>('/usage-profiles');
+    },
 
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to fetch usage profiles');
-        }
-
-        return response.data;
+    /**
+     * Get a specific usage profile by ID
+     */
+    async get(profileId: string): Promise<UsageProfile> {
+        return await api.get<UsageProfile>(`/usage-profiles/${profileId}`);
     },
 
     /**
      * Validate a usage profile
      */
-    async validate(profileId: string): Promise<{ valid: boolean }> {
-        const response = await apiClient.post<{ valid: boolean }>(
-            '/api/usage-profiles/validate',
-            { profile_id: profileId }
-        );
-
-        if (!response.data) {
-            throw new Error(response.error?.message || 'Failed to validate profile');
-        }
-
-        return response.data;
+    async validate(profile: UsageProfile): Promise<{ valid: boolean; errors?: string[] }> {
+        return await api.post<{ valid: boolean; errors?: string[] }>('/usage-profiles/validate', profile);
     }
 };
