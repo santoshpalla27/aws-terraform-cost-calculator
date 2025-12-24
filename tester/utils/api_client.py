@@ -136,6 +136,86 @@ class PlatformClient:
         """DELETE request."""
         return self.request('DELETE', endpoint, **kwargs)
     
+    def upload_terraform_fixture(self, fixture_path) -> dict:
+        """
+        Upload Terraform fixture with FULL contract validation.
+        
+        This method enforces:
+        - ApiResponse schema validation
+        - correlation_id presence and UUID format
+        - success=true requirement
+        
+        Args:
+            fixture_path: Path to fixture directory or ZIP file
+            
+        Returns:
+            Validated API response with upload_id
+            
+        Raises:
+            AssertionError: If contract violated
+        """
+        from pathlib import Path
+        import io
+        import zipfile
+        
+        fixture_path = Path(fixture_path)
+        
+        # Create ZIP if directory provided
+        if fixture_path.is_dir():
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for tf_file in fixture_path.glob('*.tf'):
+                    zip_file.write(tf_file, arcname=tf_file.name)
+            zip_buffer.seek(0)
+            zip_data = zip_buffer.read()
+        else:
+            # Read ZIP file
+            with open(fixture_path, 'rb') as f:
+                zip_data = f.read()
+        
+        # Prepare multipart upload
+        files = {
+            'file': ('terraform.zip', zip_data, 'application/zip')
+        }
+        
+        url = f"{self.base_url}/uploads"
+        
+        # Make upload request
+        try:
+            response = self.session.post(url, files=files)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise AssertionError(f"Upload request failed: {e}")
+        
+        # Parse JSON
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            raise AssertionError(f"Upload returned invalid JSON: {response.text}")
+        
+        # ENFORCE ApiResponse contract
+        self._validate_response(data)
+        
+        # ENFORCE success=true
+        assert data['success'] is True, \
+            f"Upload failed: {data.get('error', {}).get('message', 'Unknown error')}"
+        
+        # ENFORCE upload_id presence
+        assert 'data' in data, "Upload response missing 'data' field"
+        assert 'upload_id' in data['data'], "Upload response missing 'upload_id'"
+        
+        upload_id = data['data']['upload_id']
+        
+        # ENFORCE UUID format
+        import uuid
+        try:
+            uuid.UUID(upload_id)
+        except ValueError:
+            raise AssertionError(f"upload_id is not a valid UUID: {upload_id}")
+        
+        return data
+    
     def get_correlation_id(self, response: dict) -> str:
         """Extract correlation_id from response."""
         return response.get('correlation_id', 'MISSING')
+

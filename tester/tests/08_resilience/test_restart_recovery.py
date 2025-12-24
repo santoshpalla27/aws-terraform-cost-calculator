@@ -46,18 +46,12 @@ def test_job_survives_orchestrator_restart(api_client, track_correlation):
     
     profile_id = profiles_response['data'][0]['id']
     
-    # Upload Terraform
+    # Upload Terraform using PlatformClient (enforces contract)
     fixture_dir = Path(__file__).parent.parent.parent / 'fixtures' / 'simple_ec2'
     assert fixture_dir.exists(), f"FAILED: Fixture not found: {fixture_dir}"
     
-    from tests.test_07_e2e.test_full_user_flow import create_terraform_zip
-    import requests
-    
-    files = {'file': ('terraform.zip', create_terraform_zip(fixture_dir), 'application/zip')}
-    upload_response = requests.post(f"{api_client.base_url}/uploads", files=files)
-    assert upload_response.status_code in [200, 201], "FAILED: Upload failed"
-    
-    upload_id = upload_response.json()['data']['upload_id']
+    upload_response = api_client.upload_terraform_fixture(fixture_dir)
+    upload_id = upload_response['data']['upload_id']
     
     # Create job
     job_response = api_client.post('/jobs', json={
@@ -186,18 +180,12 @@ def test_job_survives_pricing_engine_restart(api_client, track_correlation):
     
     profile_id = profiles_response['data'][0]['id']
     
-    # Upload Terraform
+    # Upload Terraform using PlatformClient (enforces contract)
     fixture_dir = Path(__file__).parent.parent.parent / 'fixtures' / 'simple_ec2'
     assert fixture_dir.exists(), f"FAILED: Fixture not found: {fixture_dir}"
     
-    from tests.test_07_e2e.test_full_user_flow import create_terraform_zip
-    import requests
-    
-    files = {'file': ('terraform.zip', create_terraform_zip(fixture_dir), 'application/zip')}
-    upload_response = requests.post(f"{api_client.base_url}/uploads", files=files)
-    assert upload_response.status_code in [200, 201], "FAILED: Upload failed"
-    
-    upload_id = upload_response.json()['data']['upload_id']
+    upload_response = api_client.upload_terraform_fixture(fixture_dir)
+    upload_id = upload_response['data']['upload_id']
     
     # Create job
     job_response = api_client.post('/jobs', json={

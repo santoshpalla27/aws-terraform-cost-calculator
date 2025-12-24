@@ -71,28 +71,15 @@ def test_full_user_flow_real_execution(api_client, track_correlation):
     assert main_tf.exists(), f"FAILED: main.tf not found: {main_tf}"
     assert providers_tf.exists(), f"FAILED: providers.tf not found: {providers_tf}"
     
-    # Create multipart upload
-    import requests
+    # Upload using PlatformClient (enforces contract)
+    upload_response = api_client.upload_terraform_fixture(fixture_dir)
+    track_correlation(upload_response, '/uploads', 'POST')
     
-    files = {
-        'file': ('terraform.zip', create_terraform_zip(fixture_dir), 'application/zip')
-    }
-    
-    upload_url = f"{api_client.base_url}/uploads"
-    upload_response = requests.post(upload_url, files=files)
-    
-    assert upload_response.status_code in [200, 201], \
-        f"FAILED: Upload failed with status {upload_response.status_code}. Response: {upload_response.text}"
-    
-    upload_data = upload_response.json()
-    assert upload_data.get('success'), \
-        f"FAILED: Upload API returned success=false. Error: {upload_data.get('error')}"
-    
-    upload_id = upload_data['data'].get('upload_id')
-    assert upload_id is not None, "FAILED: Upload response missing 'upload_id'"
+    # Extract upload_id (already validated by client)
+    upload_id = upload_response['data']['upload_id']
     
     print(f"   ✓ Upload successful: {upload_id}")
-    track_correlation(upload_data, '/uploads', 'POST')
+
     
     # ========================================================================
     # STEP 3: Create job
