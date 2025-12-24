@@ -10,8 +10,8 @@ import { ApiResponse, isApiResponse } from './types';
  * - Errors include correlation_id
  */
 
-// Use relative path - proxied by nginx
-const API_BASE_URL = '/api';
+// Use environment variable or fallback to /api
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 /**
  * Enhanced error with correlation_id
