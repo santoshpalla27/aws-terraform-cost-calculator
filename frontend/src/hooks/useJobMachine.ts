@@ -1,4 +1,3 @@
-```typescript
 import { useReducer, useEffect, useCallback, useRef } from 'react';
 import { jobsApi, ApiError } from '../api';
 import { JobState, JobStateMachine } from '../state/jobStateMachine';
@@ -29,7 +28,7 @@ export function useJobMachine(jobId: string) {
         if (hasLoadedRef.current) return;
 
         try {
-            console.log(`[Job Machine] Loading job ${ jobId } `);
+            console.log(`[Job Machine] Loading job ${jobId}`);
 
             const job = await jobsApi.get(jobId);
 
@@ -60,21 +59,21 @@ export function useJobMachine(jobId: string) {
     const loadResults = useCallback(async () => {
         if (hasLoadedResultsRef.current) return;
         if (state.state !== JobState.COMPLETED) return;
-        
+
         try {
             console.log('[Job Machine] Loading results');
-            
+
             const results = await jobsApi.getResults(jobId);
-            
+
             dispatch({
                 type: 'RESULTS_LOADED',
                 payload: results
             });
-            
+
             hasLoadedResultsRef.current = true;
         } catch (error) {
             console.error('[Job Machine] Failed to load results:', error);
-            
+
             const apiError = error as ApiError;
             dispatch({
                 type: 'JOB_FAILED',
