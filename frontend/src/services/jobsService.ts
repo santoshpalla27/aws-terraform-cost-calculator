@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import type { ApiResponse, PaginatedResponse } from '../types/api';
-import type { Job, JobListParams, JobLogs, JobTimeline } from '../types/job';
+import type { Job, JobListParams, JobLogs, JobTimeline, JobStatusData } from '../types/job';
 import type { CostEstimationResult } from '../types/cost';
 
 /**
@@ -134,4 +134,20 @@ export const jobsService = {
             return [];
         }
     },
+
+    /**
+     * Get job status for polling (lightweight)
+     */
+    async getJobStatus(jobId: string): Promise<JobStatusData> {
+        const response = await apiClient.get<ApiResponse<JobStatusData>>(
+            `/api/jobs/${jobId}/status`
+        );
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error?.message || 'Failed to fetch job status');
+        }
+
+        return response.data;
+    },
 };
+

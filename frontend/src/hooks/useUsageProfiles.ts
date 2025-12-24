@@ -1,27 +1,23 @@
 import { useState, useEffect } from 'react';
-import { jobsApi, ApiError } from '../api';
-import { Job } from '../api/types';
+import { usageProfilesApi, ApiError } from '../api';
+import { UsageProfile } from '../api/types';
 
 /**
- * Hook for fetching multiple jobs
+ * Hook for fetching usage profiles
  * 
  * NO direct API calls in components
  */
-export function useJobs(params?: {
-    status?: string;
-    page?: number;
-    page_size?: number;
-}) {
-    const [jobs, setJobs] = useState<Job[]>([]);
+export function useUsageProfiles() {
+    const [profiles, setProfiles] = useState<UsageProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [correlationId, setCorrelationId] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchJobs = async () => {
+        const fetchProfiles = async () => {
             try {
-                const data = await jobsApi.list(params);
-                setJobs(data);
+                const data = await usageProfilesApi.list();
+                setProfiles(data);
                 setError(null);
             } catch (err) {
                 const apiError = err as ApiError;
@@ -32,14 +28,13 @@ export function useJobs(params?: {
             }
         };
 
-        fetchJobs();
-    }, [params?.status, params?.page, params?.page_size]);
+        fetchProfiles();
+    }, []);
 
     return {
-        jobs,
+        profiles,
         isLoading,
         error,
-        correlationId,
-        refresh: () => setIsLoading(true)
+        correlationId
     };
 }

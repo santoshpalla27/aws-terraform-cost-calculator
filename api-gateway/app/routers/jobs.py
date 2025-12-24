@@ -23,8 +23,9 @@ async def create_job(
     """
     Create a new cost estimation job.
     
-    The job will be created in PENDING status and queued for processing.
+    The job will be created in CREATED status and queued for processing.
     """
+    from datetime import datetime
     correlation_id = getattr(request_obj.state, 'correlation_id', 'unknown')
     job = await job_service.create_job(request, user_id)
     
@@ -43,6 +44,7 @@ async def get_job(
     user_id: str = Depends(get_current_user)
 ):
     """Get job details by ID."""
+    from datetime import datetime
     correlation_id = getattr(request.state, 'correlation_id', 'unknown')
     job = await job_service.get_job(job_id, user_id)
     
@@ -81,14 +83,71 @@ async def list_jobs(
     
     total_pages = math.ceil(total / page_size) if total > 0 else 0
     
-    # Return in standard ApiResponse format with flattened pagination
+    # Return in canonical ApiResponse format
     return {
         "success": True,
-        "data": jobs,  # Direct array, not nested
-        "total": total,
-        "page": page,
-        "pageSize": page_size,  # Use camelCase for frontend
-        "totalPages": total_pages,
+        "data": jobs,
+        "error": None,
+        "correlation_id": correlation_id
+    }
+
+
+@router.get("/{job_id}/status")
+async def get_job_status(
+    request: Request,
+    job_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get lightweight job status for polling.
+    
+    Returns minimal status information for efficient real-time updates.
+    Use this endpoint instead of GET /api/jobs/{job_id} for polling.
+    """
+    from datetime import datetime
+    correlation_id = getattr(request.state, 'correlation_id', 'unknown')
+    status_data = await job_service.get_job_status(job_id, user_id)
+    
+    return {
+        "success": True,
+        "data": status_data,
+        "error": None,
+        "correlation_id": correlation_id
+    }
+
+
+@router.get("/{job_id}/results")
+async def get_job_results(
+    request: Request,
+    job_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get cost estimation results for completed job.
+    
+    Returns 400 if job is not in COMPLETED status.
+    Proxies request to results-governance-service.
+    """
+    from datetime import datetime
+    correlation_id = getattr(request.state, 'correlation_id', 'unknown')
+    
+    # Verify job exists and belongs to user
+    job = await job_service.get_job(job_id, user_id)
+    
+    # Check if job is completed
+    if job.status != JobStatus.COMPLETED:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Job is not completed (current status: {job.status.value})"
+        )
+    
+    # Fetch results from results service
+    results = await job_service.get_job_results(job_id)
+    
+    return {
+        "success": True,
+        "data": results,
         "error": None,
         "correlation_id": correlation_id
     }

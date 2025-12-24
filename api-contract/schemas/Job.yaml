@@ -1,0 +1,88 @@
+Job:
+  type: object
+  required:
+    - job_id
+    - status
+    - progress
+    - current_stage
+    - created_at
+    - updated_at
+  properties:
+    job_id:
+      type: string
+      format: uuid
+      description: Unique job identifier
+      example: "650e8400-e29b-41d4-a716-446655440000"
+    
+    upload_id:
+      type: string
+      format: uuid
+      description: Associated upload identifier
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    
+    user_id:
+      type: string
+      description: User who created the job
+      example: "user123"
+    
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: Human-readable job name
+      example: "Production Infrastructure Cost Estimate"
+    
+    status:
+      $ref: './JobStatus.yaml#/JobStatus'
+    
+    progress:
+      type: integer
+      minimum: 0
+      maximum: 100
+      description: Job completion percentage
+      example: 42
+    
+    current_stage:
+      type: string
+      enum:
+        - terraform_plan
+        - plan_parsing
+        - metadata_enrichment
+        - pricing_lookup
+        - usage_modeling
+        - cost_aggregation
+        - result_persistence
+      description: Current pipeline stage (maps to status)
+      example: "terraform_plan"
+    
+    created_at:
+      type: string
+      format: date-time
+      description: Job creation timestamp (ISO 8601)
+      example: "2024-01-01T12:00:00Z"
+    
+    updated_at:
+      type: string
+      format: date-time
+      description: Last update timestamp (ISO 8601)
+      example: "2024-01-01T12:05:30Z"
+    
+    completed_at:
+      type: string
+      format: date-time
+      nullable: true
+      description: Job completion timestamp (ISO 8601)
+      example: "2024-01-01T12:10:00Z"
+    
+    errors:
+      type: array
+      items:
+        type: string
+      description: List of error messages (empty if no errors)
+      example: []
+    
+    error_message:
+      type: string
+      nullable: true
+      description: Primary error message if job failed
+      example: null

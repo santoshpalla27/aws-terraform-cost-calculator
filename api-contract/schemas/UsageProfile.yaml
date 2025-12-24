@@ -1,0 +1,42 @@
+UsageProfile:
+  type: object
+  required:
+    - id
+    - name
+    - description
+    - is_default
+  properties:
+    id:
+      type: string
+      description: Unique profile identifier
+      example: "prod"
+    
+    name:
+      type: string
+      description: Display name
+      example: "Production"
+    
+    description:
+      type: string
+      description: Profile description
+      example: "Production workload assumptions (24/7 operation, high availability)"
+    
+    is_default:
+      type: boolean
+      description: Whether this is the default profile
+      example: true
+    
+    assumptions:
+      type: object
+      description: Usage assumptions for this profile
+      properties:
+        hours_per_day:
+          type: number
+          example: 24
+        days_per_month:
+          type: number
+          example: 30
+        availability_zone_count:
+          type: integer
+          example: 3
+      additionalProperties: true

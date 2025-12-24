@@ -8,9 +8,22 @@ from pydantic import BaseModel, Field
 
 
 class JobStatus(str, Enum):
-    """Job status enumeration."""
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
+    """
+    Canonical job status enumeration.
+    MUST match api-contract/schemas/JobStatus.yaml
+    
+    State transitions:
+    IDLE → UPLOADING → CREATED → PLANNING → PARSING → ENRICHING → COSTING → COMPLETED
+                                                                              ↓
+                                                                            FAILED
+    """
+    IDLE = "IDLE"
+    UPLOADING = "UPLOADING"
+    CREATED = "CREATED"
+    PLANNING = "PLANNING"
+    PARSING = "PARSING"
+    ENRICHING = "ENRICHING"
+    COSTING = "COSTING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
@@ -43,10 +56,13 @@ class Job(BaseModel):
     upload_id: str = Field(..., description="Associated upload ID")
     user_id: str = Field(..., description="User who created the job")
     name: str = Field(..., description="Job name")
-    status: JobStatus = Field(default=JobStatus.PENDING)
+    status: JobStatus = Field(default=JobStatus.CREATED)
+    progress: int = Field(default=0, ge=0, le=100, description="Job completion percentage")
+    current_stage: Optional[str] = Field(default=None, description="Current pipeline stage")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
+    errors: list[str] = Field(default_factory=list, description="List of error messages")
     error_message: Optional[str] = None
     
     class Config:

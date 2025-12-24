@@ -183,6 +183,64 @@ class JobService:
             )
         
         logger.info(f"Job deleted: {job_id}")
+    
+    async def get_job_status(self, job_id: str, user_id: str) -> dict:
+        """
+        Get lightweight job status for polling.
+        
+        Args:
+            job_id: Job identifier
+            user_id: User identifier
+            
+        Returns:
+            Dictionary with job_id, status, progress, updated_at
+            
+        Raises:
+            HTTPException: If job not found or access denied
+        """
+        job = await self.get_job(job_id, user_id)
+        
+        return {
+            "job_id": job.job_id,
+            "status": job.status.value,
+            "progress": job.progress if hasattr(job, 'progress') else 0,
+            "updated_at": job.updated_at.isoformat() if job.updated_at else None
+        }
+    
+    async def get_job_results(self, job_id: str) -> dict:
+        """
+        Fetch cost estimation results from results-governance-service.
+        
+        Args:
+            job_id: Job identifier
+            
+        Returns:
+            Cost estimation results
+            
+        Raises:
+            HTTPException: If results service unavailable or results not found
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{settings.results_service_url}/api/results/{job_id}"
+                )
+                
+                if response.status_code == 404:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Results not found for this job"
+                    )
+                
+                response.raise_for_status()
+                return response.json()
+                
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to fetch results for job {job_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Results service temporarily unavailable"
+            )
 
 
 # Global service instance

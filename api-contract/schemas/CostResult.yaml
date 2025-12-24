@@ -1,0 +1,90 @@
+CostResult:
+  type: object
+  required:
+    - job_id
+    - total_monthly_cost
+    - currency
+    - breakdown
+    - confidence
+  properties:
+    job_id:
+      type: string
+      format: uuid
+      description: Associated job identifier
+      example: "650e8400-e29b-41d4-a716-446655440000"
+    
+    total_monthly_cost:
+      type: number
+      format: double
+      minimum: 0
+      description: Total estimated monthly cost
+      example: 1234.56
+    
+    currency:
+      type: string
+      enum: [USD, EUR, GBP]
+      description: Currency code
+      example: "USD"
+    
+    breakdown:
+      type: array
+      items:
+        $ref: '#/ResourceCost'
+      description: Per-resource cost breakdown
+    
+    confidence:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 1
+      description: Overall confidence score (0-1)
+      example: 0.87
+    
+    metadata:
+      type: object
+      properties:
+        terraform_version:
+          type: string
+          example: "1.6.0"
+        resource_count:
+          type: integer
+          example: 15
+        estimated_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T12:10:00Z"
+
+ResourceCost:
+  type: object
+  required:
+    - resource_name
+    - resource_type
+    - service
+    - monthly_cost
+  properties:
+    resource_name:
+      type: string
+      description: Terraform resource identifier
+      example: "aws_instance.web_server"
+    
+    resource_type:
+      type: string
+      description: AWS resource type
+      example: "aws_instance"
+    
+    service:
+      type: string
+      description: AWS service name
+      example: "EC2"
+    
+    monthly_cost:
+      type: number
+      format: double
+      minimum: 0
+      description: Estimated monthly cost for this resource
+      example: 45.60
+    
+    details:
+      type: object
+      description: Additional cost details
+      additionalProperties: true

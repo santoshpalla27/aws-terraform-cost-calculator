@@ -39,3 +39,10 @@ export interface JobLogs {
     level: 'info' | 'warn' | 'error';
     message: string;
 }
+
+export interface JobStatusData {
+    job_id: string;
+    status: JobStatus;
+    progress: number;
+    updated_at: string;
+}

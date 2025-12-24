@@ -1,46 +1,140 @@
 """
-Cost Result database model.
+Cost result domain models with IMMUTABILITY guarantees.
+
+CRITICAL: Results are WRITE-ONCE and cannot be modified after creation.
 """
-from sqlalchemy import Column, String, DateTime, Text, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 from datetime import datetime
-import uuid
-from app.persistence.database import Base
+from decimal import Decimal
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
 
 
-class CostResult(Base):
-    """Cost result - immutable record of FCM."""
+class ResourceCost(BaseModel):
+    """Individual resource cost breakdown."""
     
-    __tablename__ = "cost_results"
+    resource_name: str = Field(..., description="Resource identifier")
+    resource_type: str = Field(..., description="AWS resource type")
+    service: str = Field(..., description="AWS service")
+    region: str = Field(..., description="AWS region")
+    monthly_cost: Decimal = Field(..., description="Monthly cost in USD")
+    unit_cost: Optional[Decimal] = Field(None, description="Unit cost")
+    quantity: Optional[Decimal] = Field(None, description="Quantity")
+    pricing_unit: Optional[str] = Field(None, description="Pricing unit")
     
-    # Primary key
-    result_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: float(v)
+        }
+
+
+class CostResult(BaseModel):
+    """
+    Immutable cost estimation result.
     
-    # Metadata
-    project_id = Column(String(255), nullable=False, index=True)
-    environment = Column(String(50), nullable=False, index=True)
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    CRITICAL RULES:
+    - Write-once: Created exactly once per job
+    - No updates: Any modification attempt throws error
+    - No deletes: Results are permanent
+    - Versioned: By job_id, pricing_snapshot, usage_profile
+    """
     
-    # FCM data (JSONB for flexibility and queryability)
-    fcm = Column(JSONB, nullable=False)
+    # Identity
+    result_id: str = Field(..., description="Unique result identifier (UUID)")
+    job_id: str = Field(..., description="Associated job ID (unique)")
     
-    # Verification
-    determinism_hash = Column(String(64), nullable=False, index=True)
-    overall_confidence = Column(String(20), nullable=False)
-    
-    # Build metadata
-    git_commit = Column(String(255), nullable=True)
-    build_id = Column(String(255), nullable=True)
-    trigger = Column(String(50), nullable=True)  # manual, ci, scheduled
-    
-    # Audit
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
-    # Indexes for common queries
-    __table_args__ = (
-        Index('idx_project_env_time', 'project_id', 'environment', 'timestamp'),
-        Index('idx_determinism_hash', 'determinism_hash'),
+    # Versioning metadata
+    pricing_snapshot: str = Field(
+        ...,
+        description="Pricing data version/timestamp (ISO 8601)"
+    )
+    usage_profile: str = Field(
+        ...,
+        description="Usage profile used (e.g., 'prod', 'dev')"
+    )
+    terraform_version: Optional[str] = Field(
+        None,
+        description="Terraform version used"
     )
     
-    def __repr__(self):
-        return f"<CostResult(result_id={self.result_id}, project={self.project_id}, env={self.environment})>"
+    # Cost data
+    total_monthly_cost: Decimal = Field(
+        ...,
+        description="Total estimated monthly cost"
+    )
+    currency: str = Field(default="USD", description="Currency code")
+    breakdown: List[ResourceCost] = Field(
+        default_factory=list,
+        description="Per-resource cost breakdown"
+    )
+    
+    # Confidence and metadata
+    confidence: str = Field(
+        default="MEDIUM",
+        description="Confidence level: HIGH, MEDIUM, LOW"
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional metadata"
+    )
+    
+    # Immutability markers
+    is_immutable: bool = Field(
+        default=True,
+        description="Immutability flag (always True)"
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Creation timestamp (immutable)"
+    )
+    created_by: Optional[str] = Field(
+        None,
+        description="User ID who created the result"
+    )
+    
+    # Tracing
+    correlation_id: str = Field(
+        ...,
+        description="Request correlation ID"
+    )
+    
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: float(v),
+            datetime: lambda v: v.isoformat()
+        }
+        json_schema_extra = {
+            "example": {
+                "result_id": "550e8400-e29b-41d4-a716-446655440000",
+                "job_id": "650e8400-e29b-41d4-a716-446655440000",
+                "pricing_snapshot": "2024-01-15T12:00:00Z",
+                "usage_profile": "prod",
+                "terraform_version": "1.6.0",
+                "total_monthly_cost": 1234.56,
+                "currency": "USD",
+                "breakdown": [],
+                "confidence": "HIGH",
+                "is_immutable": True,
+                "created_at": "2024-01-15T12:30:00Z",
+                "correlation_id": "750e8400-e29b-41d4-a716-446655440000"
+            }
+        }
+
+
+class ResultSummary(BaseModel):
+    """
+    Lightweight result summary for historical comparison.
+    """
+    
+    result_id: str
+    job_id: str
+    total_monthly_cost: Decimal
+    currency: str
+    usage_profile: str
+    created_at: datetime
+    confidence: str
+    
+    class Config:
+        json_encoders = {
+            Decimal: lambda v: float(v),
+            datetime: lambda v: v.isoformat()
+        }

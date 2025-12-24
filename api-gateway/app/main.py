@@ -58,6 +58,7 @@ app.include_router(usage_profiles.router)
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle validation errors."""
+    from datetime import datetime
     correlation_id = get_correlation_id()
     errors = exc.errors()
     
@@ -96,6 +97,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions."""
+    from datetime import datetime
     correlation_id = get_correlation_id()
     logger.warning(
         f"HTTP exception: {exc.status_code} - {exc.detail}",
@@ -119,6 +121,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected errors."""
+    from datetime import datetime
     correlation_id = get_correlation_id()
     logger.error(f"Unexpected error: {str(exc)}", exc_info=True, extra={"correlation_id": correlation_id})
     
@@ -129,8 +132,7 @@ async def general_exception_handler(request: Request, exc: Exception):
             "data": None,
             "error": {
                 "code": "INTERNAL_ERROR",
-                "message": "An unexpected error occurred",
-                "details": str(exc) if settings.log_level == "DEBUG" else None
+                "message": "An unexpected error occurred"
             },
             "correlation_id": correlation_id
         }

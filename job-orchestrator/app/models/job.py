@@ -8,7 +8,11 @@ from app.state_machine.states import JobState
 
 
 class Job(BaseModel):
-    """Job domain model."""
+    """
+    Job domain model with atomic state tracking.
+    
+    CRITICAL: All state changes must be persisted BEFORE calling downstream services.
+    """
     
     job_id: str = Field(..., description="Unique job identifier")
     upload_id: str = Field(..., description="Associated upload ID")
@@ -19,15 +23,28 @@ class Job(BaseModel):
     current_state: JobState = Field(default=JobState.UPLOADED)
     previous_state: Optional[JobState] = None
     
+    # Progress tracking (0-100)
+    progress: int = Field(default=0, ge=0, le=100)
+    current_step: Optional[str] = None
+    
+    # Error tracking
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    last_error: Optional[str] = None
+    
+    # Correlation ID for tracing
+    correlation_id: str = Field(..., description="Request correlation ID")
+    
     # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
     
     # Execution tracking
     retry_count: int = Field(default=0)
-    error_message: Optional[str] = None
+    max_retries: int = Field(default=3)
     
     # Results
     plan_reference: Optional[str] = None
@@ -44,7 +61,38 @@ class Job(BaseModel):
                 "user_id": "user123",
                 "name": "Production Infrastructure Cost Estimate",
                 "current_state": "UPLOADED",
+                "progress": 0,
+                "correlation_id": "750e8400-e29b-41d4-a716-446655440000",
                 "created_at": "2024-01-01T12:00:00Z"
+            }
+        }
+
+
+class StateTransition(BaseModel):
+    """
+    Audit log for state transitions.
+    Ensures traceability and debugging.
+    """
+    
+    id: str = Field(..., description="Transition ID")
+    job_id: str = Field(..., description="Job ID")
+    from_state: JobState = Field(..., description="Previous state")
+    to_state: JobState = Field(..., description="New state")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    correlation_id: str = Field(..., description="Request correlation ID")
+    success: bool = Field(default=True)
+    error: Optional[str] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "850e8400-e29b-41d4-a716-446655440000",
+                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                "from_state": "UPLOADED",
+                "to_state": "PLANNING",
+                "timestamp": "2024-01-01T12:00:00Z",
+                "correlation_id": "750e8400-e29b-41d4-a716-446655440000",
+                "success": True
             }
         }
 
@@ -55,9 +103,11 @@ class JobStateResponse(BaseModel):
     job_id: str
     current_state: JobState
     previous_state: Optional[JobState]
+    progress: int
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-    error_message: Optional[str] = None
     
     class Config:
         json_schema_extra = {
@@ -65,7 +115,9 @@ class JobStateResponse(BaseModel):
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
                 "current_state": "PLANNING",
                 "previous_state": "UPLOADED",
+                "progress": 20,
                 "created_at": "2024-01-01T12:00:00Z",
                 "updated_at": "2024-01-01T12:01:00Z"
             }
         }
+

@@ -1,0 +1,483 @@
+openapi: 3.0.3
+info:
+  title: Terraform Cost Intelligence Platform API
+  version: 1.0.0
+  description: |
+    API Gateway for Terraform-based AWS infrastructure cost estimation platform.
+    
+    **Canonical Response Format**: All endpoints return ApiResponse wrapper.
+    
+  contact:
+    name: Platform Team
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: /api
+    description: Production (behind reverse proxy)
+
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      required:
+        - success
+        - data
+        - error
+        - correlation_id
+      properties:
+        success:
+          type: boolean
+          description: Whether the request succeeded
+        data:
+          description: Response payload (null on error)
+          oneOf:
+            - type: object
+            - type: array
+            - type: "null"
+        error:
+          description: Error details (null on success)
+          oneOf:
+            - $ref: '#/components/schemas/ErrorObject'
+            - type: "null"
+        correlation_id:
+          type: string
+          format: uuid
+          description: Request correlation ID for tracing
+    
+    ErrorObject:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Request validation failed"
+        details:
+          type: object
+          description: Additional error context
+    
+    Job:
+      type: object
+      required:
+        - job_id
+        - name
+        - status
+        - created_at
+        - updated_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+    
+    JobStatusData:
+      type: object
+      required:
+        - job_id
+        - status
+        - progress
+        - updated_at
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        updated_at:
+          type: string
+          format: date-time
+    
+    CostEstimationResult:
+      type: object
+      required:
+        - job_id
+        - currency
+        - total_monthly_cost
+        - breakdown
+        - confidence
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          example: "USD"
+        total_monthly_cost:
+          type: number
+          format: float
+          example: 1234.56
+        breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostBreakdownItem'
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.87
+    
+    CostBreakdownItem:
+      type: object
+      required:
+        - resource_name
+        - resource_type
+        - service
+        - monthly_cost
+      properties:
+        resource_name:
+          type: string
+          example: "aws_instance.web_server"
+        resource_type:
+          type: string
+          example: "aws_instance"
+        service:
+          type: string
+          example: "EC2"
+        monthly_cost:
+          type: number
+          format: float
+          example: 45.60
+        details:
+          type: object
+          description: Additional cost details
+    
+    UsageProfile:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - isDefault
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        isDefault:
+          type: boolean
+        assumptions:
+          type: object
+    
+    CreateJobRequest:
+      type: object
+      required:
+        - name
+        - upload_id
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        upload_id:
+          type: string
+          format: uuid
+        usage_profile:
+          type: string
+          default: "prod"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/usage-profiles:
+    get:
+      summary: Get available usage profiles
+      tags:
+        - Usage Profiles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of usage profiles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UsageProfile'
+        '503':
+          description: Usage service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/jobs:
+    post:
+      summary: Create a new cost estimation job
+      tags:
+        - Jobs
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Job'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    
+    get:
+      summary: List jobs with pagination
+      tags:
+        - Jobs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, RUNNING, COMPLETED, FAILED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Paginated list of jobs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Job'
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+  /api/jobs/{job_id}:
+    get:
+      summary: Get job details
+      tags:
+        - Jobs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    
+    delete:
+      summary: Delete a job
+      tags:
+        - Jobs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Job deleted successfully
+        '404':
+          description: Job not found
+
+  /api/jobs/{job_id}/status:
+    get:
+      summary: Get lightweight job status (for polling)
+      description: |
+        Returns minimal status information for efficient polling.
+        Use this endpoint for real-time status updates instead of GET /api/jobs/{job_id}.
+      tags:
+        - Jobs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/JobStatusData'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/jobs/{job_id}/results:
+    get:
+      summary: Get cost estimation results
+      description: |
+        Fetch cost estimation results for a completed job.
+        Returns 400 if job is not in COMPLETED status.
+      tags:
+        - Jobs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cost estimation results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CostEstimationResult'
+        '400':
+          description: Job not completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Usage Profiles
+    description: Usage profile management
+  - name: Jobs
+    description: Cost estimation job management

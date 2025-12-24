@@ -1,0 +1,22 @@
+JobStatus:
+  type: string
+  enum:
+    - IDLE
+    - UPLOADING
+    - CREATED
+    - PLANNING
+    - PARSING
+    - ENRICHING
+    - COSTING
+    - COMPLETED
+    - FAILED
+  description: |
+    Canonical job status representing the current stage in the cost estimation pipeline.
+    
+    State transitions:
+    IDLE → UPLOADING → CREATED → PLANNING → PARSING → ENRICHING → COSTING → COMPLETED
+                                                                              ↓
+                                                                            FAILED (from any state)
+    
+    **CRITICAL**: All services MUST use these exact values. No custom statuses allowed.
+  example: PLANNING
