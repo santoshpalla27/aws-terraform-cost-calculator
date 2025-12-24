@@ -145,12 +145,22 @@ async def startup_event():
     logger.info("API Gateway starting up...")
     logger.info(f"Auth enabled: {settings.auth_enabled}")
     logger.info(f"Rate limiting enabled: {settings.rate_limit_enabled}")
+    
+    # Initialize database
+    from app.database.connection import init_db
+    await init_db()
+    logger.info("Database initialized")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event."""
     logger.info("API Gateway shutting down...")
+    
+    # Close database connections
+    from app.database.connection import close_db
+    await close_db()
+    logger.info("Database connections closed")
 
 
 if __name__ == "__main__":

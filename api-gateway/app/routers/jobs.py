@@ -3,12 +3,14 @@ Job endpoints.
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import JobStatus
 from app.models.requests import CreateJobRequest
 from app.models.responses import JobResponse, PaginatedResponse
 from app.models.domain import Job
-from app.services.job_service import job_service
+from app.services import job_service
 from app.middleware.auth import get_current_user
+from app.database.connection import get_db
 import math
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
@@ -18,7 +20,8 @@ router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 async def create_job(
     request_obj: Request,
     request: CreateJobRequest,
-    user_id: str = Depends(get_current_user)
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create a new cost estimation job.
@@ -27,7 +30,7 @@ async def create_job(
     """
     from datetime import datetime
     correlation_id = getattr(request_obj.state, 'correlation_id', 'unknown')
-    job = await job_service.create_job(request, user_id)
+    job = await job_service.create_job(request, user_id, db)
     
     return {
         "success": True,
@@ -41,12 +44,13 @@ async def create_job(
 async def get_job(
     request: Request,
     job_id: str,
-    user_id: str = Depends(get_current_user)
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get job details by ID."""
     from datetime import datetime
     correlation_id = getattr(request.state, 'correlation_id', 'unknown')
-    job = await job_service.get_job(job_id, user_id)
+    job = await job_service.get_job(job_id, user_id, db)
     
     return {
         "success": True,

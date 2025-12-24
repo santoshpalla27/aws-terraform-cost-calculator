@@ -1,247 +1,155 @@
 """
-Job service.
-Handles job creation and orchestration initiation.
+Job service with database persistence.
+Simplified implementation using dependency injection.
 """
 import uuid
 import httpx
 from typing import List, Optional
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.domain import Job, JobStatus
 from app.models.requests import CreateJobRequest
-from app.repositories.job_repo import job_repository
+from app.repositories.job_repo import JobRepository
 from app.repositories.upload_repo import upload_repository
+from app.database.connection import get_db
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class JobService:
-    """Service for job management."""
+async def create_job(
+    request: CreateJobRequest,
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+) -> Job:
+    """
+    Create a new cost estimation job.
     
-    async def create_job(
-        self,
-        request: CreateJobRequest,
-        user_id: str
-    ) -> Job:
-        """
-        Create a new cost estimation job.
+    Args:
+        request: Job creation request
+        user_id: User identifier
+        db: Database session
         
-        Args:
-            request: Job creation request
-            user_id: User identifier
-            
-        Returns:
-            Created job
-            
-        Raises:
-            HTTPException: If validation fails
-        """
-        # Verify upload exists
-        upload = await upload_repository.get_by_id(request.upload_id)
-        if not upload:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Upload {request.upload_id} not found"
-            )
-        
-        # Verify user owns the upload
-        if upload.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to create a job for this upload"
-            )
-        
-        # Create job
-        job_id = str(uuid.uuid4())
-        job = Job(
-            job_id=job_id,
-            upload_id=request.upload_id,
-            user_id=user_id,
-            name=request.name,
-            status=JobStatus.CREATED
-        )
-        
-        await job_repository.create(job)
-        
-        logger.info(
-            f"Job created: {job_id}",
-            extra={'job_id': job_id, 'upload_id': request.upload_id}
-        )
-        
-        # Trigger job orchestrator
-        try:
-            await self._trigger_orchestrator(job)
-        except Exception as e:
-            logger.error(f"Failed to trigger orchestrator for job {job_id}: {e}")
-            # Don't fail job creation if orchestrator trigger fails
-            # Job can be retried later
-        
-        return job
+    Returns:
+        Created job
+    """
+    job_repo = JobRepository(db)
     
-    async def _trigger_orchestrator(self, job: Job, correlation_id: str = None) -> None:
-        """
-        Trigger job orchestrator to start processing.
-        
-        Args:
-            job: Job to start
-            correlation_id: Optional correlation ID for tracing
-        """
-        headers = {}
-        
-        # Add auth header only if service_auth_token is configured
-        if settings.service_auth_token:
-            headers["Authorization"] = f"Bearer {settings.service_auth_token}"
-        
-        if correlation_id:
-            headers["X-Correlation-ID"] = correlation_id
-        
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                f"{settings.job_orchestrator_url}/internal/jobs/{job.job_id}/start",
-                headers=headers
-            )
-            response.raise_for_status()
-            logger.info(f"Triggered orchestrator for job {job.job_id}")
-    
-    async def get_job(self, job_id: str, user_id: str) -> Job:
-        """
-        Get job by ID.
-        
-        Args:
-            job_id: Job identifier
-            user_id: User identifier
-            
-        Returns:
-            Job object
-            
-        Raises:
-            HTTPException: If job not found or access denied
-        """
-        job = await job_repository.get_by_id(job_id)
-        if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Job {job_id} not found"
-            )
-        
-        # Verify user owns the job
-        if job.user_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to access this job"
-            )
-        
-        return job
-    
-    async def list_jobs(
-        self,
-        user_id: str,
-        status: Optional[JobStatus] = None,
-        page: int = 1,
-        page_size: int = 10
-    ) -> tuple[List[Job], int]:
-        """
-        List jobs for a user.
-        
-        Args:
-            user_id: User identifier
-            status: Filter by status
-            page: Page number
-            page_size: Items per page
-            
-        Returns:
-            Tuple of (jobs, total_count)
-        """
-        return await job_repository.list_jobs(
-            user_id=user_id,
-            status=status,
-            page=page,
-            page_size=page_size
+    # Verify upload exists
+    upload = await upload_repository.get_by_id(request.upload_id)
+    if not upload:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Upload {request.upload_id} not found"
         )
     
-    async def delete_job(self, job_id: str, user_id: str) -> None:
-        """
-        Delete a job.
-        
-        Args:
-            job_id: Job identifier
-            user_id: User identifier
-            
-        Raises:
-            HTTPException: If job not found or access denied
-        """
-        # Verify job exists and user owns it
-        job = await self.get_job(job_id, user_id)
-        
-        # Delete job
-        deleted = await job_repository.delete(job_id)
-        if not deleted:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Job {job_id} not found"
-            )
-        
-        logger.info(f"Job deleted: {job_id}")
+    # Verify user owns the upload
+    if upload.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to create a job for this upload"
+        )
     
-    async def get_job_status(self, job_id: str, user_id: str) -> dict:
-        """
-        Get lightweight job status for polling.
-        
-        Args:
-            job_id: Job identifier
-            user_id: User identifier
-            
-        Returns:
-            Dictionary with job_id, status, progress, updated_at
-            
-        Raises:
-            HTTPException: If job not found or access denied
-        """
-        job = await self.get_job(job_id, user_id)
-        
-        return {
-            "job_id": job.job_id,
-            "status": job.status.value,
-            "progress": job.progress if hasattr(job, 'progress') else 0,
-            "updated_at": job.updated_at.isoformat() if job.updated_at else None
-        }
+    # Create job
+    job_id = str(uuid.uuid4())
+    job = Job(
+        job_id=job_id,
+        upload_id=request.upload_id,
+        user_id=user_id,
+        name=request.name,
+        current_state=JobStatus.CREATED
+    )
     
-    async def get_job_results(self, job_id: str) -> dict:
-        """
-        Fetch cost estimation results from results-governance-service.
-        
-        Args:
-            job_id: Job identifier
-            
-        Returns:
-            Cost estimation results
-            
-        Raises:
-            HTTPException: If results service unavailable or results not found
-        """
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{settings.results_service_url}/api/results/{job_id}"
-                )
-                
-                if response.status_code == 404:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Results not found for this job"
-                    )
-                
-                response.raise_for_status()
-                return response.json()
-                
-        except httpx.HTTPError as e:
-            logger.error(f"Failed to fetch results for job {job_id}: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Results service temporarily unavailable"
-            )
+    await job_repo.create(job)
+    
+    logger.info(
+        f"Job created: {job_id}",
+        extra={'job_id': job_id, 'upload_id': request.upload_id}
+    )
+    
+    # Trigger job orchestrator
+    try:
+        await _trigger_orchestrator(job)
+    except Exception as e:
+        logger.error(f"Failed to trigger orchestrator for job {job_id}: {e}")
+        # Don't fail job creation if orchestrator trigger fails
+    
+    return job
 
 
-# Global service instance
-job_service = JobService()
+async def _trigger_orchestrator(job: Job, correlation_id: str = None) -> None:
+    """Trigger job orchestrator to start processing."""
+    headers = {}
+    
+    if settings.service_auth_token:
+        headers["Authorization"] = f"Bearer {settings.service_auth_token}"
+    
+    if correlation_id:
+        headers["X-Correlation-ID"] = correlation_id
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(
+            f"{settings.job_orchestrator_url}/internal/jobs/{job.job_id}/start",
+            headers=headers
+        )
+        response.raise_for_status()
+
+
+async def get_job(
+    job_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+) -> Job:
+    """Get job by ID."""
+    job_repo = JobRepository(db)
+    job = await job_repo.get_by_id(job_id)
+    
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found"
+        )
+    
+    if job.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this job"
+        )
+    
+    return job
+
+
+async def list_jobs(
+    user_id: str,
+    status: Optional[JobStatus] = None,
+    page: int = 1,
+    page_size: int = 10,
+    db: AsyncSession = Depends(get_db)
+) -> tuple[List[Job], int]:
+    """List jobs for a user."""
+    job_repo = JobRepository(db)
+    return await job_repo.list_jobs(
+        user_id=user_id,
+        status=status,
+        page=page,
+        page_size=page_size
+    )
+
+
+async def delete_job(
+    job_id: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+) -> bool:
+    """Delete a job."""
+    # Verify job exists and user owns it
+    job = await get_job(job_id, user_id, db)
+    
+    job_repo = JobRepository(db)
+    deleted = await job_repo.delete(job_id)
+    
+    if deleted:
+        logger.info(f"Job deleted: {job_id}", extra={'job_id': job_id})
+    
+    return deleted

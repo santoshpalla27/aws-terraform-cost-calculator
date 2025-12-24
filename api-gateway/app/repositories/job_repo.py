@@ -1,22 +1,25 @@
 """
-Job repository.
-In-memory storage (database-ready architecture).
+Job repository with PostgreSQL persistence.
 """
-from typing import Dict, List, Optional
+from typing import List, Optional
 from datetime import datetime
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import Job, JobStatus
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class JobRepository:
-    """Repository for job persistence."""
+    """Repository for job persistence using PostgreSQL."""
     
-    def __init__(self):
-        # In-memory storage (replace with database in production)
-        self._jobs: Dict[str, Job] = {}
+    def __init__(self, session: AsyncSession):
+        self.session = session
     
     async def create(self, job: Job) -> Job:
         """
-        Create a new job record.
+        Create a new job record in database.
         
         Args:
             job: Job object to store
@@ -24,12 +27,36 @@ class JobRepository:
         Returns:
             Created job
         """
-        self._jobs[job.job_id] = job
+        query = text("""
+            INSERT INTO jobs (
+                job_id, upload_id, user_id, name, current_state,
+                created_at, updated_at
+            ) VALUES (
+                :job_id, :upload_id, :user_id, :name, :current_state,
+                :created_at, :updated_at
+            )
+        """)
+        
+        await self.session.execute(
+            query,
+            {
+                "job_id": job.job_id,
+                "upload_id": job.upload_id,
+                "user_id": job.user_id,
+                "name": job.name,
+                "current_state": job.current_state.value,
+                "created_at": job.created_at,
+                "updated_at": job.updated_at
+            }
+        )
+        await self.session.commit()
+        
+        logger.info(f"Created job {job.job_id} in database")
         return job
     
     async def get_by_id(self, job_id: str) -> Optional[Job]:
         """
-        Get job by ID.
+        Get job by ID from database.
         
         Args:
             job_id: Job identifier
@@ -37,7 +64,25 @@ class JobRepository:
         Returns:
             Job object or None if not found
         """
-        return self._jobs.get(job_id)
+        query = text("SELECT * FROM jobs WHERE job_id = :job_id")
+        result = await self.session.execute(query, {"job_id": job_id})
+        row = result.fetchone()
+        
+        if not row:
+            return None
+        
+        return Job(
+            job_id=row.job_id,
+            upload_id=row.upload_id,
+            user_id=row.user_id,
+            name=row.name,
+            current_state=JobStatus(row.current_state),
+            progress=0,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+            completed_at=row.completed_at,
+            error_message=row.error_message
+        )
     
     async def list_jobs(
         self,
@@ -58,26 +103,56 @@ class JobRepository:
         Returns:
             Tuple of (jobs_list, total_count)
         """
-        # Filter jobs
-        jobs = list(self._jobs.values())
+        # Build query
+        where_clauses = []
+        params = {}
         
         if user_id:
-            jobs = [j for j in jobs if j.user_id == user_id]
+            where_clauses.append("user_id = :user_id")
+            params["user_id"] = user_id
         
         if status:
-            jobs = [j for j in jobs if j.status == status]
+            where_clauses.append("current_state = :status")
+            params["status"] = status.value
         
-        # Sort by created_at descending
-        jobs.sort(key=lambda x: x.created_at, reverse=True)
+        where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
         
-        total = len(jobs)
+        # Get total count
+        count_query = text(f"SELECT COUNT(*) FROM jobs{where_sql}")
+        count_result = await self.session.execute(count_query, params)
+        total = count_result.scalar()
         
-        # Paginate
-        start = (page - 1) * page_size
-        end = start + page_size
-        paginated_jobs = jobs[start:end]
+        # Get paginated jobs
+        offset = (page - 1) * page_size
+        params["limit"] = page_size
+        params["offset"] = offset
         
-        return paginated_jobs, total
+        jobs_query = text(f"""
+            SELECT * FROM jobs{where_sql}
+            ORDER BY created_at DESC
+            LIMIT :limit OFFSET :offset
+        """)
+        
+        result = await self.session.execute(jobs_query, params)
+        rows = result.fetchall()
+        
+        jobs = [
+            Job(
+                job_id=row.job_id,
+                upload_id=row.upload_id,
+                user_id=row.user_id,
+                name=row.name,
+                current_state=JobStatus(row.current_state),
+                progress=0,
+                created_at=row.created_at,
+                updated_at=row.updated_at,
+                completed_at=row.completed_at,
+                error_message=row.error_message
+            )
+            for row in rows
+        ]
+        
+        return jobs, total
     
     async def update_status(
         self,
@@ -86,7 +161,7 @@ class JobRepository:
         error_message: Optional[str] = None
     ) -> Optional[Job]:
         """
-        Update job status.
+        Update job status in database.
         
         Args:
             job_id: Job identifier
@@ -96,24 +171,36 @@ class JobRepository:
         Returns:
             Updated job or None if not found
         """
-        job = self._jobs.get(job_id)
-        if not job:
-            return None
+        updates = {
+            "current_state": status.value,
+            "updated_at": datetime.utcnow(),
+            "job_id": job_id
+        }
         
-        job.status = status
-        job.updated_at = datetime.utcnow()
+        query_str = """
+            UPDATE jobs SET
+                current_state = :current_state,
+                updated_at = :updated_at
+        """
         
-        if status == JobStatus.COMPLETED or status == JobStatus.FAILED:
-            job.completed_at = datetime.utcnow()
+        if status in [JobStatus.COMPLETED, JobStatus.FAILED]:
+            query_str += ", completed_at = :completed_at"
+            updates["completed_at"] = datetime.utcnow()
         
         if error_message:
-            job.error_message = error_message
+            query_str += ", error_message = :error_message"
+            updates["error_message"] = error_message
         
-        return job
+        query_str += " WHERE job_id = :job_id"
+        
+        await self.session.execute(text(query_str), updates)
+        await self.session.commit()
+        
+        return await self.get_by_id(job_id)
     
     async def delete(self, job_id: str) -> bool:
         """
-        Delete a job.
+        Delete a job from database.
         
         Args:
             job_id: Job identifier
@@ -121,11 +208,9 @@ class JobRepository:
         Returns:
             True if deleted, False if not found
         """
-        if job_id in self._jobs:
-            del self._jobs[job_id]
-            return True
-        return False
+        query = text("DELETE FROM jobs WHERE job_id = :job_id")
+        result = await self.session.execute(query, {"job_id": job_id})
+        await self.session.commit()
+        
+        return result.rowcount > 0
 
-
-# Global repository instance
-job_repository = JobRepository()
