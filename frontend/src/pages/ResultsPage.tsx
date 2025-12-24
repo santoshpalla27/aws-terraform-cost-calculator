@@ -74,22 +74,12 @@ export default function ResultsPage({ jobId }: ResultsPageProps) {
                 {/* Metadata */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <p className="text-gray-600">Usage Profile</p>
-                        <p className="font-medium text-gray-900">{results.usage_profile || 'N/A'}</p>
+                        <p className="text-gray-600">Currency</p>
+                        <p className="font-medium text-gray-900">{results.currency}</p>
                     </div>
                     <div>
-                        <p className="text-gray-600">Confidence</p>
-                        <p className="font-medium text-gray-900">{results.confidence}</p>
-                    </div>
-                    <div>
-                        <p className="text-gray-600">Created At</p>
-                        <p className="font-medium text-gray-900">
-                            {new Date(results.created_at).toLocaleString()}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-gray-600">Result ID</p>
-                        <p className="font-mono text-xs text-gray-700">{results.result_id}</p>
+                        <p className="text-gray-600">Job ID</p>
+                        <p className="font-mono text-xs text-gray-700">{results.job_id}</p>
                     </div>
                 </div>
             </div>
@@ -110,18 +100,13 @@ export default function ResultsPage({ jobId }: ResultsPageProps) {
                                         {item.resource_name}
                                     </p>
                                     <p className="text-sm text-gray-500">
-                                        {item.service} • {item.resource_type} • {item.region}
+                                        {item.service} • {item.resource_type}
                                     </p>
                                 </div>
                                 <div className="text-right">
                                     <p className="font-semibold text-gray-900">
                                         ${item.monthly_cost.toFixed(2)}
                                     </p>
-                                    {item.quantity && item.pricing_unit && (
-                                        <p className="text-sm text-gray-500">
-                                            {item.quantity} {item.pricing_unit}
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         ))}
