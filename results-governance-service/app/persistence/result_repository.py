@@ -13,7 +13,7 @@ from app.models.exceptions import (
     ResultAlreadyExistsError,
     ResultNotFoundError
 )
-from app.persistence.database import get_db_session
+from app.persistence.database import get_db
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
