@@ -1,0 +1,59 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://platform.example.com/schemas/CostResult.json",
+    "title": "Cost Result",
+    "description": "Immutable cost estimation result",
+    "type": "object",
+    "required": [
+        "job_id",
+        "total_monthly_cost",
+        "currency",
+        "breakdown"
+    ],
+    "properties": {
+        "job_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "total_monthly_cost": {
+            "type": "number",
+            "minimum": 0
+        },
+        "currency": {
+            "type": "string",
+            "enum": [
+                "USD",
+                "EUR",
+                "GBP"
+            ]
+        },
+        "breakdown": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "resource_name",
+                    "service",
+                    "resource_type",
+                    "monthly_cost"
+                ],
+                "properties": {
+                    "resource_name": {
+                        "type": "string"
+                    },
+                    "service": {
+                        "type": "string"
+                    },
+                    "resource_type": {
+                        "type": "string"
+                    },
+                    "monthly_cost": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                }
+            }
+        }
+    },
+    "additionalProperties": false
+}

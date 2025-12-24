@@ -1,0 +1,38 @@
+# Endpoints configuration
+base_url: ${BASE_URL}
+api_base: ${API_BASE}
+
+endpoints:
+  health: /health
+  api_health: /api/health
+  
+  # Usage Profiles
+  usage_profiles: /api/usage-profiles
+  usage_profile_detail: /api/usage-profiles/{profile_id}
+  
+  # Jobs
+  jobs: /api/jobs
+  job_detail: /api/jobs/{job_id}
+  job_status: /api/jobs/{job_id}/status
+  job_results: /api/jobs/{job_id}/results
+  
+  # Uploads
+  uploads: /api/uploads
+  upload_detail: /api/uploads/{upload_id}
+
+# Timeouts (seconds)
+timeouts:
+  health_check: 5
+  api_request: 30
+  job_completion: 300
+  
+# Polling configuration
+polling:
+  initial_delay: 1.0
+  max_delay: 30.0
+  max_attempts: 100
+
+# Rate limiting
+rate_limit:
+  requests_per_second: 100
+  burst: 150

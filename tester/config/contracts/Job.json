@@ -1,0 +1,84 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://platform.example.com/schemas/Job.json",
+    "title": "Job",
+    "description": "Cost estimation job",
+    "type": "object",
+    "required": [
+        "job_id",
+        "name",
+        "upload_id",
+        "status",
+        "progress",
+        "created_at",
+        "updated_at"
+    ],
+    "properties": {
+        "job_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "upload_id": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "usage_profile": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "UPLOADED",
+                "PLANNING",
+                "PARSING",
+                "ENRICHING",
+                "COSTING",
+                "COMPLETED",
+                "FAILED"
+            ]
+        },
+        "progress": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+        },
+        "current_stage": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "updated_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "completed_at": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time"
+        },
+        "errors": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "error_message": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

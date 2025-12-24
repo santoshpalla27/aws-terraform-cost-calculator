@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.example.com/schemas/ApiResponse.json",
+  "title": "API Response Envelope",
+  "description": "Standard response envelope for all API endpoints",
+  "type": "object",
+  "required": ["success", "data", "error", "correlation_id"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Indicates if the request was successful"
+    },
+    "data": {
+      "description": "Response payload (null on error)",
+      "oneOf": [
+        {"type": "object"},
+        {"type": "array"},
+        {"type": "null"}
+      ]
+    },
+    "error": {
+      "description": "Error details (null on success)",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["message", "code"],
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Human-readable error message"
+            },
+            "code": {
+              "type": "string",
+              "description": "Machine-readable error code"
+            },
+            "details": {
+              "type": "object",
+              "description": "Additional error context"
+            }
+          }
+        },
+        {"type": "null"}
+      ]
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique request identifier for tracing"
+    }
+  },
+  "additionalProperties": false
+}
