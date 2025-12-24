@@ -59,7 +59,7 @@ class JobService:
             upload_id=request.upload_id,
             user_id=user_id,
             name=request.name,
-            status=JobStatus.PENDING
+            status=JobStatus.CREATED
         )
         
         await job_repository.create(job)
