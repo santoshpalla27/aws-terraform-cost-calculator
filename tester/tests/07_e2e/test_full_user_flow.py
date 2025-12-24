@@ -71,6 +71,10 @@ def test_full_user_flow_real_execution(api_client, track_correlation):
     assert main_tf.exists(), f"FAILED: main.tf not found: {main_tf}"
     assert providers_tf.exists(), f"FAILED: providers.tf not found: {providers_tf}"
     
+    # ENFORCE: Fixture certification (hash validation)
+    from utils.fixture_validation import assert_fixture_certified
+    assert_fixture_certified(fixture_dir, 'simple_ec2')
+    
     # Upload using PlatformClient (enforces contract)
     upload_response = api_client.upload_terraform_fixture(fixture_dir)
     track_correlation(upload_response, '/uploads', 'POST')
