@@ -14,7 +14,7 @@ export const settingsService = {
      */
     async getUsageProfiles(): Promise<UsageProfile[]> {
         const response = await apiClient.get<ApiResponse<UsageProfile[]>>(
-            '/api/usage-profiles'
+            '/usage-profiles'
         );
 
         if (!response.success || !response.data) {
@@ -29,7 +29,7 @@ export const settingsService = {
      */
     async getUsageProfile(profileId: string): Promise<UsageProfile> {
         const response = await apiClient.get<ApiResponse<UsageProfile>>(
-            `/api/usage-profiles/${profileId}`
+            `/usage-profiles/${profileId}`
         );
 
         if (!response.success || !response.data) {

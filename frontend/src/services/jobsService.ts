@@ -32,7 +32,7 @@ export const jobsService = {
      */
     async getJobs(params?: JobListParams): Promise<PaginatedResponse<Job>> {
         const response = await apiClient.get<any>(
-            '/api/jobs',
+            '/jobs',
             params
         );
 
@@ -55,7 +55,7 @@ export const jobsService = {
      * Get a specific job by ID
      */
     async getJob(jobId: string): Promise<Job> {
-        const response = await apiClient.get<any>(`/api/jobs/${jobId}`);
+        const response = await apiClient.get<any>(`/jobs/${jobId}`);
 
         if (!response.success || !response.data) {
             throw new Error(response.error?.message || 'Failed to fetch job');
@@ -70,7 +70,7 @@ export const jobsService = {
      */
     async getJobResults(jobId: string): Promise<CostEstimationResult> {
         const response = await apiClient.get<ApiResponse<CostEstimationResult>>(
-            `/api/jobs/${jobId}/results`
+            `/jobs/${jobId}/results`
         );
 
         if (!response.success || !response.data) {
@@ -85,7 +85,7 @@ export const jobsService = {
      */
     async retryJob(jobId: string): Promise<Job> {
         const response = await apiClient.post<ApiResponse<Job>>(
-            `/api/jobs/${jobId}/retry`
+            `/jobs/${jobId}/retry`
         );
 
         if (!response.success || !response.data) {
@@ -101,7 +101,7 @@ export const jobsService = {
     async getJobTimeline(jobId: string): Promise<JobTimeline[]> {
         try {
             const response = await apiClient.get<ApiResponse<JobTimeline[]>>(
-                `/api/jobs/${jobId}/timeline`
+                `/jobs/${jobId}/timeline`
             );
 
             if (!response.success || !response.data) {
@@ -121,7 +121,7 @@ export const jobsService = {
     async getJobLogs(jobId: string): Promise<JobLogs[]> {
         try {
             const response = await apiClient.get<ApiResponse<JobLogs[]>>(
-                `/api/jobs/${jobId}/logs`
+                `/jobs/${jobId}/logs`
             );
 
             if (!response.success || !response.data) {
@@ -140,7 +140,7 @@ export const jobsService = {
      */
     async getJobStatus(jobId: string): Promise<JobStatusData> {
         const response = await apiClient.get<ApiResponse<JobStatusData>>(
-            `/api/jobs/${jobId}/status`
+            `/jobs/${jobId}/status`
         );
 
         if (!response.success || !response.data) {

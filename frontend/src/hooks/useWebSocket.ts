@@ -23,7 +23,7 @@ export function useWebSocket(jobId: string) {
             return;
         }
 
-        const url = `${baseURL}/api/jobs/${jobId}/status`;
+        const url = `${baseURL}/jobs/${jobId}/status`;
 
         try {
             const ws = new WebSocket(url);

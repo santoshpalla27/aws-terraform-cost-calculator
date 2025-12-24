@@ -46,7 +46,7 @@ export const uploadService = {
         });
 
         const uploadResponse = await apiClient.post<UploadResponseData>(
-            '/api/uploads',
+            '/uploads',
             formData,
             {
                 headers: {
@@ -80,7 +80,7 @@ export const uploadService = {
         }
 
         const jobResponse = await apiClient.post<ApiResponse<Job>>(
-            '/api/jobs',
+            '/jobs',
             {
                 upload_id: uploadId,
                 name: request.name,

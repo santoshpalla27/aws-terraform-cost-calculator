@@ -20,7 +20,7 @@ export const jobsApi = {
         upload_id: string;
         usage_profile?: string;
     }): Promise<Job> {
-        return api.post<Job>('/api/jobs', {
+        return api.post<Job>('/jobs', {
             name: params.name,
             upload_id: params.upload_id,
             usage_profile: params.usage_profile || 'prod'
@@ -31,7 +31,7 @@ export const jobsApi = {
      * Get job by ID
      */
     async get(jobId: string): Promise<Job> {
-        return api.get<Job>(`/api/jobs/${jobId}`);
+        return api.get<Job>(`/jobs/${jobId}`);
     },
 
     /**
@@ -47,7 +47,7 @@ export const jobsApi = {
         if (params?.page) query.set('page', params.page.toString());
         if (params?.page_size) query.set('page_size', params.page_size.toString());
 
-        const endpoint = `/api/jobs${query.toString() ? '?' + query.toString() : ''}`;
+        const endpoint = `/jobs${query.toString() ? '?' + query.toString() : ''}`;
         return api.get<Job[]>(endpoint);
     },
 
@@ -55,14 +55,14 @@ export const jobsApi = {
      * Get job results
      */
     async getResults(jobId: string): Promise<CostResult> {
-        return api.get<CostResult>(`/api/jobs/${jobId}/results`);
+        return api.get<CostResult>(`/jobs/${jobId}/results`);
     },
 
     /**
      * Delete job
      */
     async delete(jobId: string): Promise<void> {
-        return api.delete<void>(`/api/jobs/${jobId}`);
+        return api.delete<void>(`/jobs/${jobId}`);
     }
 };
 
@@ -74,14 +74,14 @@ export const usageProfilesApi = {
      * Get all usage profiles
      */
     async list(): Promise<UsageProfile[]> {
-        return api.get<UsageProfile[]>('/api/usage-profiles');
+        return api.get<UsageProfile[]>('/usage-profiles');
     },
 
     /**
      * Validate a usage profile
      */
     async validate(profileId: string): Promise<{ valid: boolean }> {
-        return api.post<{ valid: boolean }>('/api/usage-profiles/validate', {
+        return api.post<{ valid: boolean }>('/usage-profiles/validate', {
             profile_id: profileId
         });
     }
