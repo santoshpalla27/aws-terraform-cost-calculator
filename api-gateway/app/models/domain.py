@@ -56,7 +56,7 @@ class Job(BaseModel):
     upload_id: str = Field(..., description="Associated upload ID")
     user_id: str = Field(..., description="User who created the job")
     name: str = Field(..., description="Job name")
-    status: JobStatus = Field(default=JobStatus.CREATED)
+    current_state: JobStatus = Field(default=JobStatus.CREATED, alias="status", description="Current job state")
     progress: int = Field(default=0, ge=0, le=100, description="Job completion percentage")
     current_stage: Optional[str] = Field(default=None, description="Current pipeline stage")
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -66,13 +66,14 @@ class Job(BaseModel):
     error_message: Optional[str] = None
     
     class Config:
+        populate_by_name = True  # Allow both 'status' and 'current_state'
         json_schema_extra = {
             "example": {
                 "job_id": "650e8400-e29b-41d4-a716-446655440000",
                 "upload_id": "550e8400-e29b-41d4-a716-446655440000",
                 "user_id": "user123",
                 "name": "Production Infrastructure Cost Estimate",
-                "status": "PENDING",
+                "status": "CREATED",
                 "created_at": "2024-01-01T12:00:00Z",
                 "updated_at": "2024-01-01T12:00:00Z"
             }
