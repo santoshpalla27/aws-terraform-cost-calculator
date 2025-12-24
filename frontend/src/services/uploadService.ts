@@ -96,6 +96,19 @@ export const uploadService = {
             onProgress({ loaded: 100, total: 100, percentage: 100 });
         }
 
-        return jobResponse.data;
+        // Transform backend response (snake_case) to frontend type (camelCase)
+        const backendJob = jobResponse.data as any;
+        const job: Job = {
+            id: backendJob.job_id,
+            name: backendJob.name,
+            status: backendJob.status,
+            createdAt: backendJob.created_at,
+            updatedAt: backendJob.updated_at,
+            completedAt: backendJob.completed_at,
+            errorMessage: backendJob.error_message,
+            progress: backendJob.progress,
+        };
+
+        return job;
     },
 };
