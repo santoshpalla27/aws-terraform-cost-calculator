@@ -4,20 +4,19 @@ import { useJobs } from '@/hooks/useJobs';
 import { Clock, CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
 import { formatRelativeTime } from '@/utils/formatters';
 import { cn } from '@/utils/formatters';
-import type { JobStatus as JobStatusType } from '@/types/job';
 
-const STATUS_CONFIG = {
-    PENDING: {
+const STATUS_CONFIG: Record<string, any> = {
+    UPLOADED: {
         icon: Clock,
         color: 'text-yellow-600',
         bg: 'bg-yellow-100',
-        label: 'Pending',
+        label: 'Uploaded',
     },
-    RUNNING: {
+    PLANNING: {
         icon: Loader2,
         color: 'text-blue-600',
         bg: 'bg-blue-100',
-        label: 'Running',
+        label: 'Planning',
     },
     COMPLETED: {
         icon: CheckCircle,
@@ -38,7 +37,7 @@ interface JobListProps {
 }
 
 export function JobList({ onJobClick }: JobListProps) {
-    const { jobs, isLoading, error, params, updateParams, pagination } = useJobs();
+    const { jobs, isLoading, error, correlationId, refresh } = useJobs();
 
     if (isLoading && jobs.length === 0) {
         return (
@@ -52,6 +51,9 @@ export function JobList({ onJobClick }: JobListProps) {
         return (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                 <p className="text-sm text-red-800">{error}</p>
+                {correlationId && (
+                    <p className="text-xs text-red-600 mt-1">ID: {correlationId}</p>
+                )}
             </div>
         );
     }
@@ -66,45 +68,15 @@ export function JobList({ onJobClick }: JobListProps) {
 
     return (
         <div className="space-y-6">
-            {/* Filters */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                <button
-                    onClick={() => updateParams({ status: undefined })}
-                    className={cn(
-                        'rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                        !params.status
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    )}
-                >
-                    All
-                </button>
-                {Object.entries(STATUS_CONFIG).map(([status, config]) => (
-                    <button
-                        key={status}
-                        onClick={() => updateParams({ status: status as JobStatusType })}
-                        className={cn(
-                            'rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                            params.status === status
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        )}
-                    >
-                        {config.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Job List */}
             <div className="space-y-3">
                 {jobs.map((job) => {
-                    const config = STATUS_CONFIG[job.status];
+                    const config = STATUS_CONFIG[job.status] || STATUS_CONFIG.UPLOADED;
                     const Icon = config.icon;
 
                     return (
                         <div
-                            key={job.id}
-                            onClick={() => onJobClick?.(job.id)}
+                            key={job.job_id}
+                            onClick={() => onJobClick?.(job.job_id)}
                             className="block rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md cursor-pointer"
                         >
                             <div className="flex items-start justify-between">
@@ -115,21 +87,21 @@ export function JobList({ onJobClick }: JobListProps) {
                                                 className={cn(
                                                     'h-5 w-5',
                                                     config.color,
-                                                    job.status === 'RUNNING' && 'animate-spin'
+                                                    (job.status === 'PLANNING' || job.status === 'PARSING') && 'animate-spin'
                                                 )}
                                             />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-gray-900">{job.name}</h3>
+                                            <h3 className="font-semibold text-gray-900">{job.name || 'Unnamed Job'}</h3>
                                             <p className="text-sm text-gray-500">
-                                                {formatRelativeTime(job.createdAt)}
+                                                {formatRelativeTime(job.created_at)}
                                             </p>
                                         </div>
                                     </div>
-                                    {job.errorMessage && (
-                                        <p className="mt-2 text-sm text-red-600">{job.errorMessage}</p>
+                                    {job.error_message && (
+                                        <p className="mt-2 text-sm text-red-600">{job.error_message}</p>
                                     )}
-                                    {job.progress !== undefined && job.status === 'RUNNING' && (
+                                    {job.progress !== undefined && job.progress > 0 && (
                                         <div className="mt-3">
                                             <div className="flex justify-between text-xs text-gray-600 mb-1">
                                                 <span>Progress</span>
@@ -150,31 +122,6 @@ export function JobList({ onJobClick }: JobListProps) {
                     );
                 })}
             </div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2">
-                    <button
-                        onClick={() => updateParams({ page: Math.max(1, pagination.page - 1) })}
-                        disabled={pagination.page === 1}
-                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Previous
-                    </button>
-                    <span className="text-sm text-gray-600">
-                        Page {pagination.page} of {pagination.totalPages}
-                    </span>
-                    <button
-                        onClick={() =>
-                            updateParams({ page: Math.min(pagination.totalPages, pagination.page + 1) })
-                        }
-                        disabled={pagination.page === pagination.totalPages}
-                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
         </div>
     );
 }
