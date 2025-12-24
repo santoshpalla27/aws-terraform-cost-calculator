@@ -12,7 +12,7 @@ interface ResultsPageProps {
  * CRITICAL: Results are immutable and cannot be modified.
  * No edit/update/delete buttons.
  */
-export function ResultsPage({ jobId }: ResultsPageProps) {
+export default function ResultsPage({ jobId }: ResultsPageProps) {
     const { results, isLoading, error, correlationId } = useJobResults(jobId);
 
     if (isLoading) {

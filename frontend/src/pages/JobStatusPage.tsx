@@ -19,7 +19,7 @@ interface JobStatusPageProps {
  * - Backend is source of truth
  * - Errors always show correlation_id
  */
-export function JobStatusPage({ jobId }: JobStatusPageProps) {
+export default function JobStatusPage({ jobId }: JobStatusPageProps) {
     const {
         state,
         progress,
