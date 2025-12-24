@@ -37,7 +37,17 @@ export const jobsApi = {
         page?: number;
         page_size?: number;
     }): Promise<{ jobs: Job[]; pagination: any }> {
-        const jobs = await api.get<Job[]>('/jobs', params);
+        let endpoint = '/jobs';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.status) queryParams.append('status', params.status);
+            if (params.page) queryParams.append('page', params.page.toString());
+            if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+            const queryString = queryParams.toString();
+            if (queryString) endpoint += `?${queryString}`;
+        }
+
+        const jobs = await api.get<Job[]>(endpoint);
         return {
             jobs,
             pagination: null // TODO: Extract from response
