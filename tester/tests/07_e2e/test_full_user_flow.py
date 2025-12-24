@@ -114,6 +114,7 @@ def test_full_user_flow_real_execution(api_client, track_correlation):
     previous_progress = 0
     poll_count = 0
     max_polls = 60
+    state_history = []  # Track all states for sequence validation
     
     def check_job_status():
         nonlocal previous_state, previous_progress, poll_count
@@ -127,13 +128,21 @@ def test_full_user_flow_real_execution(api_client, track_correlation):
         current_state = status_data.get('status')
         current_progress = status_data.get('progress', 0)
         
+        # Track state history
+        state_history.append(current_state)
+        
         # Validate state transition
         if previous_state is not None and previous_state != current_state:
             assert_valid_state_transition(previous_state, current_state)
+            print(f"   State transition: {previous_state} → {current_state}")
         
-        # Validate monotonic progress
+        # Validate progress monotonicity
         if current_state not in ['FAILED']:
             assert_monotonic_progress(previous_progress, current_progress)
+        
+        # Validate progress bounds for state
+        from utils.assertions import assert_progress_in_bounds
+        assert_progress_in_bounds(current_state, current_progress)
         
         previous_state = current_state
         previous_progress = current_progress
@@ -160,6 +169,13 @@ def test_full_user_flow_real_execution(api_client, track_correlation):
     
     final_state = final_status.get('status')
     assert_terminal_state(final_state)
+    
+    # ENFORCE: Canonical state sequence (no skips, no backward)
+    from utils.assertions import assert_canonical_state_sequence
+    correlation_id = job_response.get('correlation_id', 'UNKNOWN')
+    assert_canonical_state_sequence(state_history, correlation_id)
+    
+    print(f"\n   ✓ State sequence validated: {' → '.join(set(state_history))}")
     
     # MUST be COMPLETED, not FAILED
     assert final_state == 'COMPLETED', \

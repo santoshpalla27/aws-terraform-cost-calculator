@@ -2,15 +2,39 @@
 Custom assertions for platform testing.
 """
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
-# Valid job state transitions
+# CANONICAL JOB STATE SEQUENCE - HARD INVARIANT
+CANONICAL_STATE_SEQUENCE = [
+    'UPLOADED',
+    'PLANNING',
+    'PARSING',
+    'ENRICHING',
+    'PRICING',
+    'COSTING',
+    'COMPLETED'
+]
+
+# Progress bounds per state (min, max)
+STATE_PROGRESS_BOUNDS = {
+    'UPLOADED': (0, 10),
+    'PLANNING': (10, 20),
+    'PARSING': (20, 40),
+    'ENRICHING': (40, 60),
+    'PRICING': (60, 75),
+    'COSTING': (75, 95),
+    'COMPLETED': (100, 100),
+    'FAILED': (0, 100)  # Can fail at any progress
+}
+
+# Valid job state transitions (for backward compatibility)
 VALID_TRANSITIONS = {
     'UPLOADED': ['PLANNING', 'FAILED'],
     'PLANNING': ['PARSING', 'FAILED'],
     'PARSING': ['ENRICHING', 'FAILED'],
-    'ENRICHING': ['COSTING', 'FAILED'],
+    'ENRICHING': ['PRICING', 'FAILED'],
+    'PRICING': ['COSTING', 'FAILED'],
     'COSTING': ['COMPLETED', 'FAILED'],
     'COMPLETED': [],  # Terminal
     'FAILED': []      # Terminal
@@ -31,6 +55,144 @@ def assert_valid_state_transition(from_state: str, to_state: str):
     valid_next_states = VALID_TRANSITIONS.get(from_state, [])
     assert to_state in valid_next_states, \
         f"Invalid state transition: {from_state} → {to_state}. Valid: {valid_next_states}"
+
+
+def assert_canonical_state_sequence(state_history: List[str], correlation_id: str = None):
+    """
+    Assert job followed canonical state sequence with NO SKIPS.
+    
+    HARD INVARIANTS:
+    - States must follow CANONICAL_STATE_SEQUENCE order
+    - No states can be skipped (except FAILED)
+    - No backward transitions
+    - Terminal state reached exactly once
+    
+    Args:
+        state_history: List of states in order observed
+        correlation_id: Optional correlation ID for debugging
+        
+    Raises:
+        AssertionError: If sequence violated
+    """
+    if not state_history:
+        raise AssertionError("State history is empty")
+    
+    # Remove duplicates while preserving order
+    unique_states = []
+    for state in state_history:
+        if not unique_states or unique_states[-1] != state:
+            unique_states.append(state)
+    
+    # Check if ended in FAILED
+    if unique_states[-1] == 'FAILED':
+        # FAILED is allowed from any non-terminal state
+        # Verify all states before FAILED are in canonical order
+        states_before_fail = unique_states[:-1]
+        if states_before_fail:
+            _validate_canonical_order(states_before_fail, correlation_id, allow_incomplete=True)
+        return
+    
+    # Check if ended in COMPLETED
+    if unique_states[-1] == 'COMPLETED':
+        # Must have gone through ALL canonical states
+        _validate_canonical_order(unique_states, correlation_id, allow_incomplete=False)
+        return
+    
+    # Job hasn't reached terminal state yet - validate partial sequence
+    _validate_canonical_order(unique_states, correlation_id, allow_incomplete=True)
+
+
+def _validate_canonical_order(states: List[str], correlation_id: Optional[str], allow_incomplete: bool):
+    """
+    Validate states follow canonical order.
+    
+    Args:
+        states: List of states to validate
+        correlation_id: Optional correlation ID for debugging
+        allow_incomplete: If True, allow partial sequence
+        
+    Raises:
+        AssertionError: If order violated
+    """
+    # Map states to their canonical indices
+    state_indices = []
+    for state in states:
+        if state == 'FAILED':
+            continue  # Skip FAILED in sequence check
+        
+        if state not in CANONICAL_STATE_SEQUENCE:
+            raise AssertionError(
+                f"Unknown state '{state}' not in canonical sequence. "
+                f"correlation_id={correlation_id}"
+            )
+        
+        state_indices.append(CANONICAL_STATE_SEQUENCE.index(state))
+    
+    # Verify strictly increasing (no skips, no backward)
+    for i in range(len(state_indices) - 1):
+        current_idx = state_indices[i]
+        next_idx = state_indices[i + 1]
+        
+        # Check for backward transition
+        if next_idx < current_idx:
+            raise AssertionError(
+                f"BACKWARD TRANSITION: {CANONICAL_STATE_SEQUENCE[current_idx]} → "
+                f"{CANONICAL_STATE_SEQUENCE[next_idx]}. correlation_id={correlation_id}"
+            )
+        
+        # Check for skipped state
+        if next_idx - current_idx > 1:
+            skipped_states = [
+                CANONICAL_STATE_SEQUENCE[j] 
+                for j in range(current_idx + 1, next_idx)
+            ]
+            raise AssertionError(
+                f"SKIPPED STATES: {CANONICAL_STATE_SEQUENCE[current_idx]} → "
+                f"{CANONICAL_STATE_SEQUENCE[next_idx]}. "
+                f"Skipped: {skipped_states}. correlation_id={correlation_id}"
+            )
+    
+    # If not allowing incomplete, verify reached COMPLETED
+    if not allow_incomplete:
+        if states[-1] != 'COMPLETED':
+            raise AssertionError(
+                f"Job did not reach COMPLETED. Last state: {states[-1]}. "
+                f"correlation_id={correlation_id}"
+            )
+        
+        # Verify ALL canonical states were visited
+        if len(state_indices) != len(CANONICAL_STATE_SEQUENCE):
+            missing_states = [
+                CANONICAL_STATE_SEQUENCE[i]
+                for i in range(len(CANONICAL_STATE_SEQUENCE))
+                if i not in state_indices
+            ]
+            raise AssertionError(
+                f"Not all canonical states visited. Missing: {missing_states}. "
+                f"correlation_id={correlation_id}"
+            )
+
+
+def assert_progress_in_bounds(state: str, progress: float):
+    """
+    Assert progress is within valid bounds for state.
+    
+    Args:
+        state: Current job state
+        progress: Current progress value
+        
+    Raises:
+        AssertionError: If progress out of bounds
+    """
+    if state not in STATE_PROGRESS_BOUNDS:
+        # Unknown state, skip bounds check
+        return
+    
+    min_progress, max_progress = STATE_PROGRESS_BOUNDS[state]
+    
+    assert min_progress <= progress <= max_progress, \
+        f"Progress {progress}% out of bounds for state {state}. " \
+        f"Expected: {min_progress}-{max_progress}%"
 
 
 def assert_correlation_id(response: dict):
