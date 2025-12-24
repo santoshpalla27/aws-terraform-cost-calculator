@@ -3,8 +3,13 @@
 // ============================================================================
 
 export enum JobStatus {
-    PENDING = 'PENDING',
-    RUNNING = 'RUNNING',
+    IDLE = 'IDLE',
+    UPLOADING = 'UPLOADING',
+    CREATED = 'CREATED',
+    PLANNING = 'PLANNING',
+    PARSING = 'PARSING',
+    ENRICHING = 'ENRICHING',
+    COSTING = 'COSTING',
     COMPLETED = 'COMPLETED',
     FAILED = 'FAILED',
 }
