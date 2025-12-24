@@ -1,0 +1,49 @@
+version: '3.9'
+
+# ================================================================================
+# TERRAFORM COST INTELLIGENCE PLATFORM - DOCKER COMPOSE
+# ================================================================================
+
+networks:
+  cost-platform:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+services:
+  # ... (all existing services remain unchanged)
+
+  # ============================================================================
+  # PLATFORM TESTER - Quality Gate & Certification
+  # ============================================================================
+  # Black-box testing service that validates the entire platform
+  # Runs once and exits with code 0 (pass) or 1 (fail)
+  # Set CERTIFICATION_MODE=true to forbid test skips
+  # ============================================================================
+
+  platform-tester:
+    build:
+      context: ./tester
+      dockerfile: Dockerfile
+    container_name: cost-platform-tester
+    networks:
+      - cost-platform
+    depends_on:
+      nginx:
+        condition: service_started
+      api-gateway:
+        condition: service_healthy
+      job-orchestrator:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://nginx
+      API_BASE: http://nginx/api
+      PYTEST_ARGS: "-v --tb=short --color=yes"
+      CERTIFICATION_MODE: ${CERTIFICATION_MODE:-false} # Set to 'true' for strict mode
+    restart: "no" # Quality gate, not a daemon
+    profiles:
+
+

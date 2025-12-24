@@ -528,7 +528,7 @@ services:
       BASE_URL: http://nginx
       API_BASE: http://nginx/api
       PYTEST_ARGS: "-v --tb=short --color=yes"
-      CERTIFICATION_MODE: ${CERTIFICATION_MODE:-false}
+      CERTIFICATION_MODE: ${CERTIFICATION_MODE:-true}
     restart: "no"
     profiles:
       - test
