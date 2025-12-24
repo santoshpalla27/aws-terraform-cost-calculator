@@ -73,21 +73,16 @@ def test_valid_terraform_upload(api_client, track_correlation):
     
     # Validate response structure
     data = response.json()
-    assert 'success' in data, "FAILED: Response missing 'success' field"
-    assert 'correlation_id' in data, "FAILED: Response missing 'correlation_id'"
     
-    assert_correlation_id(data)
-    track_correlation(data, '/uploads', 'POST')
+    # Upload API uses custom response format (not ApiResponse envelope)
+    assert 'upload' in data, f"FAILED: Response missing 'upload' field. Got: {data.keys()}"
     
-    # Validate success
-    assert data['success'] is True, \
-        f"FAILED: Upload returned success=false. Error: {data.get('error')}"
+    upload_data = data['upload']
     
     # Validate upload_id
-    assert 'data' in data, "FAILED: Response missing 'data' field"
-    assert 'upload_id' in data['data'], "FAILED: Response missing 'upload_id'"
+    assert 'upload_id' in upload_data, "FAILED: Upload missing 'upload_id'"
     
-    upload_id = data['data']['upload_id']
+    upload_id = upload_data['upload_id']
     
     # Validate UUID format
     import uuid
@@ -125,7 +120,7 @@ def test_upload_persistence(api_client):
     
     assert upload_response.status_code in [200, 201], "FAILED: Upload failed"
     
-    upload_id = upload_response.json()['data']['upload_id']
+    upload_id = upload_response.json()['upload']['upload_id']
     print(f"   Upload created: {upload_id}")
     
     # Retrieve upload

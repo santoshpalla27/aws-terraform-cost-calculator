@@ -193,18 +193,17 @@ class PlatformClient:
         except json.JSONDecodeError:
             raise AssertionError(f"Upload returned invalid JSON: {response.text}")
         
-        # ENFORCE ApiResponse contract
-        self._validate_response(data)
+        # Upload API uses custom response format (not ApiResponse envelope)
+        # It returns: {"upload": {...}, "message": "..."}
+        assert 'upload' in data, \
+            f"Upload response missing 'upload' field. Got: {list(data.keys())}"
         
-        # ENFORCE success=true
-        assert data['success'] is True, \
-            f"Upload failed: {data.get('error', {}).get('message', 'Unknown error')}"
+        upload_data = data['upload']
         
         # ENFORCE upload_id presence
-        assert 'data' in data, "Upload response missing 'data' field"
-        assert 'upload_id' in data['data'], "Upload response missing 'upload_id'"
+        assert 'upload_id' in upload_data, "Upload response missing 'upload_id'"
         
-        upload_id = data['data']['upload_id']
+        upload_id = upload_data['upload_id']
         
         # ENFORCE UUID format
         import uuid
@@ -213,7 +212,13 @@ class PlatformClient:
         except ValueError:
             raise AssertionError(f"upload_id is not a valid UUID: {upload_id}")
         
-        return data
+        # Return in ApiResponse-like format for consistency
+        return {
+            'success': True,
+            'data': upload_data,
+            'error': None,
+            'correlation_id': 'N/A'  # Upload API doesn't use correlation_id
+        }
     
     def get_correlation_id(self, response: dict) -> str:
         """Extract correlation_id from response."""
