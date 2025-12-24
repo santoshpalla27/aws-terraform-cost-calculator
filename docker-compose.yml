@@ -165,6 +165,8 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FORMAT: json
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-cost_governance}
+      REDIS_URL: redis://redis:6379/0
       JWT_ISSUER: ${JWT_ISSUER}
       JWT_AUDIENCE: ${JWT_AUDIENCE}
       RATE_LIMIT_RPS: ${RATE_LIMIT_RPS:-100}
