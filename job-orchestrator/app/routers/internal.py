@@ -2,12 +2,14 @@
 Internal API endpoints for job orchestration.
 NO public APIs - internal network only.
 """
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
 from app.repositories.job_repo import JobRepository
 from app.models.job import JobStateResponse
 from app.state_machine.states import JobState
+from app.services.orchestrator import job_orchestrator
 from app.utils.logger import get_logger, set_job_id
 
 logger = get_logger(__name__)
@@ -22,7 +24,7 @@ async def start_job(
     """
     Start job execution.
     Accepts jobs in PENDING state (from API Gateway) or UPLOADED state.
-    Transitions to PLANNING.
+    Transitions to PLANNING and triggers background orchestration.
     """
     set_job_id(job_id)
     
@@ -52,10 +54,11 @@ async def start_job(
     # Transition to PLANNING
     await repo.update_state(job_id, JobState.PLANNING)
     
-    logger.info(f"Started job {job_id}")
+    logger.info(f"Started job {job_id}, triggering background orchestration")
     
-    # TODO: Trigger async orchestration
-    # await orchestrator.execute_job(job_id)
+    # Trigger async orchestration in background
+    # This allows the API to return immediately while job executes
+    asyncio.create_task(job_orchestrator.execute_job(job_id, db))
     
     return {"message": "Job started", "job_id": job_id}
 
