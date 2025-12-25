@@ -76,8 +76,8 @@ class JobRepository:
             return None
         
         return Job(
-            job_id=row.job_id,
-            upload_id=row.upload_id,
+            job_id=str(row.job_id),
+            upload_id=str(row.upload_id),
             user_id=row.user_id,
             name=row.name,
             current_state=JobState(row.current_state),
@@ -90,7 +90,8 @@ class JobRepository:
             error_message=row.error_message,
             plan_reference=row.plan_reference,
             result_reference=row.result_reference,
-            metadata=row.metadata or {}
+            metadata=row.metadata or {},
+            correlation_id=row.metadata.get('correlation_id', str(row.job_id)) if row.metadata else str(row.job_id)
         )
     
     async def update_state(
