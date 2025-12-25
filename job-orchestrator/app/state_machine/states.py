@@ -8,6 +8,7 @@ from enum import Enum
 class JobState(str, Enum):
     """Job state enumeration - STRICT, no additions allowed."""
     
+    CREATED = "CREATED"  # Initial state from API Gateway
     UPLOADED = "UPLOADED"
     PLANNING = "PLANNING"
     PARSING = "PARSING"
@@ -36,6 +37,7 @@ class JobState(str, Enum):
             ValueError: If current state has no next state
         """
         transitions = {
+            cls.CREATED: cls.PLANNING,  # API Gateway creates jobs in CREATED state
             cls.UPLOADED: cls.PLANNING,
             cls.PLANNING: cls.PARSING,
             cls.PARSING: cls.ENRICHING,

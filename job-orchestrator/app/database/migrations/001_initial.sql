@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     -- Constraints
     CONSTRAINT valid_state CHECK (
         current_state IN (
-            'UPLOADED', 'PLANNING', 'PARSING',
+            'CREATED', 'UPLOADED', 'PLANNING', 'PARSING',
             'ENRICHING', 'COSTING', 'COMPLETED', 'FAILED'
         )
     )
