@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
     
+    # Database
+    database_url: str = Field(..., env="DATABASE_URL")
+    
     # Downstream Services (MUST be set via environment variables)
     job_orchestrator_url: str = Field(..., env="JOB_ORCHESTRATOR_URL")
     usage_engine_url: str = Field(..., env="USAGE_ENGINE_URL")
